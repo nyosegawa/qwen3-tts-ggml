@@ -57,7 +57,8 @@ build/qwen3-tts <talker.gguf> <codec.gguf> ono_anna japanese "明日の東京は
 `qwen3-tts-worker <talker.gguf> <codec.gguf>` reads one JSON request per line on stdin and streams
 base64 PCM chunks on stdout, with the protocol of ASIST's Qwen3-TTS worker (see the comment at the top
 of `tools/qwen3-tts-worker.cpp`). `qwen3-tts-worker --devices` lists the devices it can run on with
-their memory.
+their memory, and `--device <name>` (for example `Vulkan1`) runs the worker on one of them instead of
+the first GPU.
 
 ## Accuracy
 

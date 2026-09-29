@@ -19,7 +19,7 @@
 //   {"type": "devices", "devices": [{"name": "Vulkan0", "description": "NVIDIA GeForce RTX 2080",
 //                                    "kind": "gpu", "memoryTotal": 8589934592, "memoryFree": 7516192768}]}
 //
-// usage: qwen3-tts-worker <talker.gguf> <codec.gguf> [--backend gpu|cpu] [--ctx n] [--seed n]
+// usage: qwen3-tts-worker <talker.gguf> <codec.gguf> [--device NAME|gpu|cpu] [--ctx n] [--seed n]
 //        qwen3-tts-worker --devices
 
 #include <algorithm>
@@ -150,7 +150,7 @@ int main(int argc, char ** argv) {
     int n_ctx = 2048;
     uint64_t seed = std::random_device{}();
     for (int i = 3; i + 1 < argc; i += 2) {
-        if (!std::strcmp(argv[i], "--backend")) backend_name = argv[i + 1];
+        if (!std::strcmp(argv[i], "--device") || !std::strcmp(argv[i], "--backend")) backend_name = argv[i + 1];
         else if (!std::strcmp(argv[i], "--ctx")) n_ctx = std::stoi(argv[i + 1]);
         else if (!std::strcmp(argv[i], "--seed")) seed = std::stoull(argv[i + 1]);
     }

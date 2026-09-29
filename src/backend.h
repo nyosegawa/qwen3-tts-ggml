@@ -7,5 +7,9 @@
 /** Lets only ggml's warnings and errors through to stderr; call it before touching any device. */
 void quiet_ggml_logs();
 
-/** The first GPU backend (Metal, Vulkan or CUDA, whichever was built), or the CPU when `name` is "cpu" or no GPU exists. */
+/**
+ * The backend of the device named `name` as `--devices` lists it (MTL0, Vulkan0, Vulkan1, CPU), "cpu"
+ * for the CPU, or the first GPU (Metal, Vulkan or CUDA, whichever was built) when `name` is empty or
+ * "gpu". A name no device has, or "gpu" on a machine without one, throws.
+ */
 ggml_backend_t init_backend(const std::string & name);
