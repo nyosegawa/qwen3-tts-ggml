@@ -1,0 +1,9 @@
+build/
+models/
+reference/out/
+.venv/
+__pycache__/
+*.gguf
+*.safetensors
+*.wav
+.DS_Store
