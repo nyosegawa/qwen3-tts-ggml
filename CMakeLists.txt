@@ -35,3 +35,6 @@ target_link_libraries(tokenizer-check PRIVATE qwen3tts)
 
 add_executable(qwen3-tts tools/qwen3-tts.cpp)
 target_link_libraries(qwen3-tts PRIVATE qwen3tts)
+
+add_executable(qwen3-tts-worker tools/qwen3-tts-worker.cpp)
+target_link_libraries(qwen3-tts-worker PRIVATE qwen3tts)
