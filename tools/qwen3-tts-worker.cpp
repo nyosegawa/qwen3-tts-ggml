@@ -1,5 +1,5 @@
-// A JSON-lines worker with the protocol of ASIST's resources/qwen_tts_worker.py, so that ASIST can run
-// it in place of the mlx-audio one.
+// The JSON-lines worker ASIST runs for its local speech synthesis (src/main/services/qwen-tts.ts in
+// nyosegawa/asist).
 //
 // Reads one JSON object per line from stdin and answers on stdout, each line prefixed with `ASIST_JSON:`.
 //   in : {"id": "...", "text": "...", "voice": "ono_anna", "language": "japanese", "speed": 1.0}
@@ -11,8 +11,7 @@
 //        {"type": "fatal", "error": "..."}
 //
 // Requests are served one at a time in arrival order. A cancel takes effect between two chunks, and a
-// request cancelled before it starts is dropped. `speed` is accepted and has no effect, as with
-// mlx-audio, whose Qwen3-TTS does not support it either.
+// request cancelled before it starts is dropped. `speed` is accepted and has no effect.
 //
 // `--devices` instead prints the devices ggml can run on and exits, so that the caller can tell whether
 // the machine has a GPU and how much memory it has before starting a worker:
