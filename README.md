@@ -3,7 +3,7 @@
 Qwen3-TTS 12Hz CustomVoice in C++ on [ggml](https://github.com/ggml-org/ggml), for the named speakers
 (`ono_anna`, `ryan`, ...). It decodes audio frame by frame with the same samples as decoding the whole
 utterance, so streaming does not add artifacts at the frame boundaries. It targets Metal, Vulkan and
-CUDA; so far it has been checked on Metal and on the CPU.
+CUDA; it has been checked on Metal, on Vulkan (NVIDIA) and on the CPU.
 
 It is written for [ASIST](https://github.com/nyosegawa/asist) and implements only what ASIST uses:
 
@@ -29,6 +29,13 @@ cd reference
 uv run python convert.py <Qwen3-TTS-12Hz-1.7B-CustomVoice dir> ../models/gguf --type q8_0 --codec-type f16
 ```
 
+## Binaries
+
+[Releases](https://github.com/nyosegawa/qwen3-tts-ggml/releases) carry the tools built for macOS arm64
+(Metal) and Windows x64 (Vulkan), with their SHA-256 sums. The Vulkan build needs no particular driver
+version; on the first run the GPU driver compiles its shaders, which takes seconds and is cached by the
+driver until it is updated.
+
 ## Build
 
 ```sh
@@ -49,7 +56,8 @@ build/qwen3-tts <talker.gguf> <codec.gguf> ono_anna japanese "明日の東京は
 
 `qwen3-tts-worker <talker.gguf> <codec.gguf>` reads one JSON request per line on stdin and streams
 base64 PCM chunks on stdout, with the protocol of ASIST's Qwen3-TTS worker (see the comment at the top
-of `tools/qwen3-tts-worker.cpp`).
+of `tools/qwen3-tts-worker.cpp`). `qwen3-tts-worker --devices` lists the devices it can run on with
+their memory.
 
 ## Accuracy
 
@@ -70,12 +78,14 @@ pattern; the two differ on Latin words in mixed case, contractions and `/`.
 
 ## Speed
 
-On an Apple M5 with Metal and Q8_0 weights, for Japanese sentences:
+Q8_0 weights, Japanese sentences, after the shaders are compiled:
 
-| Model | First audio | Real-time factor |
-|---|---|---|
-| 0.6B | 0.05 s | 0.36 |
-| 1.7B | 0.08 s | 0.49 |
+| Model | Device | First audio | Real-time factor | VRAM |
+|---|---|---|---|---|
+| 0.6B | Apple M5, Metal | 0.05 s | 0.35 | |
+| 1.7B | Apple M5, Metal | 0.08 s | 0.49 | |
+| 0.6B | RTX 2080, Vulkan | 0.07 s | 0.31 | 1.6 GB |
+| 1.7B | RTX 2080, Vulkan | 0.08 s | 0.36 | 2.7 GB |
 
 ## License
 
