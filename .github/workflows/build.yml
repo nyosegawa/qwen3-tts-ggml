@@ -1,0 +1,56 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  macos-metal:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_METAL_EMBED_LIBRARY=ON -DGGML_NATIVE=OFF
+          cmake --build build --config Release -j 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qwen3-tts-macos-arm64-metal
+          path: |
+            build/qwen3-tts
+            build/qwen3-tts-worker
+            build/codec-check
+            build/talker-check
+            build/tokenizer-check
+
+  windows-vulkan:
+    runs-on: windows-2025
+    env:
+      VULKAN_VERSION: 1.4.357.0
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Install the Vulkan SDK
+        run: |
+          curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/${env:VULKAN_VERSION}/windows/vulkansdk-windows-X64-${env:VULKAN_VERSION}.exe"
+          & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
+          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\${env:VULKAN_VERSION}"
+          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
+      - name: Build
+        run: |
+          cmake -B build -A x64 -DGGML_VULKAN=ON -DGGML_NATIVE=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake --build build --config Release -j 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qwen3-tts-windows-x64-vulkan
+          path: |
+            build/Release/qwen3-tts.exe
+            build/Release/qwen3-tts-worker.exe
+            build/Release/codec-check.exe
+            build/Release/talker-check.exe
+            build/Release/tokenizer-check.exe

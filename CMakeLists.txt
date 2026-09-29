@@ -7,6 +7,8 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# One executable per tool, with ggml linked in, so that a release is a single file per tool.
+option(BUILD_SHARED_LIBS "Build ggml as shared libraries" OFF)
 set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(ggml)
