@@ -3,6 +3,7 @@ name: build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -54,3 +55,28 @@ jobs:
             build/Release/codec-check.exe
             build/Release/talker-check.exe
             build/Release/tokenizer-check.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos-metal, windows-vulkan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Package
+        run: |
+          cd dist
+          # Artifacts lose the executable bit; the Mac binaries need it back.
+          (cd qwen3-tts-macos-arm64-metal && chmod +x * && zip -q "../qwen3-tts-ggml-${GITHUB_REF_NAME}-macos-arm64-metal.zip" *)
+          (cd qwen3-tts-windows-x64-vulkan && zip -q "../qwen3-tts-ggml-${GITHUB_REF_NAME}-windows-x64-vulkan.zip" *)
+          sha256sum *.zip > SHA256SUMS
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Binaries for macOS arm64 (Metal) and Windows x64 (Vulkan). The models are on https://huggingface.co/sakasegawa/qwen3-tts-ggml."

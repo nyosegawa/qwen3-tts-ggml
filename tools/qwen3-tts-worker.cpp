@@ -14,7 +14,13 @@
 // request cancelled before it starts is dropped. `speed` is accepted and has no effect, as with
 // mlx-audio, whose Qwen3-TTS does not support it either.
 //
+// `--devices` instead prints the devices ggml can run on and exits, so that the caller can tell whether
+// the machine has a GPU and how much memory it has before starting a worker:
+//   {"type": "devices", "devices": [{"name": "Vulkan0", "description": "NVIDIA GeForce RTX 2080",
+//                                    "kind": "gpu", "memoryTotal": 8589934592, "memoryFree": 7516192768}]}
+//
 // usage: qwen3-tts-worker <talker.gguf> <codec.gguf> [--backend gpu|cpu] [--ctx n] [--seed n]
+//        qwen3-tts-worker --devices
 
 #include <algorithm>
 #include <cmath>
@@ -29,6 +35,8 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #ifdef _WIN32
 #include <fcntl.h>
@@ -117,12 +125,29 @@ int main(int argc, char ** argv) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stdin), _O_BINARY);
 #endif
+    quiet_ggml_logs();
+    if (argc == 2 && !std::strcmp(argv[1], "--devices")) {
+        std::string list;
+        for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
+            ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+            const enum ggml_backend_dev_type type = ggml_backend_dev_type(dev);
+            const char * kind = type == GGML_BACKEND_DEVICE_TYPE_GPU ? "gpu" : type == GGML_BACKEND_DEVICE_TYPE_IGPU ? "igpu" : "cpu";
+            size_t free = 0, total = 0;
+            ggml_backend_dev_memory(dev, &free, &total);
+            list += (i ? "," : "") + std::string("{\"name\":") + json_string(ggml_backend_dev_name(dev)) +
+                    ",\"description\":" + json_string(ggml_backend_dev_description(dev)) + ",\"kind\":\"" + kind +
+                    "\",\"memoryTotal\":" + std::to_string(total) + ",\"memoryFree\":" + std::to_string(free) + "}";
+        }
+        emit("{\"type\":\"devices\",\"devices\":[" + list + "]}");
+        return 0;
+    }
     if (argc < 3) {
         emit("{\"type\":\"fatal\",\"error\":\"expected the talker and codec GGUF paths\"}");
         return 2;
     }
     std::string backend_name;
-    int n_ctx = 4096;
+    // 2048 positions hold a prompt and about 160 s of speech; the talker's cache is 0.24 GB at this size.
+    int n_ctx = 2048;
     uint64_t seed = std::random_device{}();
     for (int i = 3; i + 1 < argc; i += 2) {
         if (!std::strcmp(argv[i], "--backend")) backend_name = argv[i + 1];
@@ -141,12 +166,17 @@ int main(int argc, char ** argv) {
         std::sort(voices.begin(), voices.end());
         std::sort(languages.begin(), languages.end());
         if (voices.empty()) throw std::runtime_error("the model has no preset voices");
-        // The first synthesis compiles the GPU kernels and is several times slower, so it happens before "ready".
-        SynthesisRequest warmup;
-        warmup.text = "あ";
-        warmup.speaker = voices[0];
-        warmup.max_frames = 4;
-        synth->synthesize(warmup, [](const float *, size_t) { return true; });
+        // The first synthesis compiles the GPU kernels, which on Vulkan takes seconds for every new shape, so
+        // a short and a longer text run through the prompt, the talker, the code predictor and the codec at
+        // the sizes speech uses before "ready".
+        for (const auto & [text, frames] : std::vector<std::pair<std::string, int>>{
+                 {"あ", 4}, {"明日の東京は晴れで、最高気温は二十四度の予報です。", 40}}) {
+            SynthesisRequest warmup;
+            warmup.text = text;
+            warmup.speaker = voices[0];
+            warmup.max_frames = frames;
+            synth->synthesize(warmup, [](const float *, size_t) { return true; });
+        }
     } catch (const std::exception & e) {
         emit("{\"type\":\"fatal\",\"error\":" + json_string(e.what()) + "}");
         return 1;

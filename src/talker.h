@@ -59,9 +59,9 @@ public:
     const std::vector<float> & cp_next(int group, int32_t code);
 
     int64_t n_past() const { return n_past_; }
+    int n_ctx() const { return n_ctx_; }
 
 private:
-    struct Stack;
     ggml_tensor * run_stack(struct GraphCtx & g, const std::string & prefix, const DecoderShape & s, ggml_tensor * x,
                             ggml_tensor * pos, ggml_tensor * mask, std::vector<ggml_tensor *> & k_cache,
                             std::vector<ggml_tensor *> & v_cache, int64_t n_past, int64_t n_tokens);

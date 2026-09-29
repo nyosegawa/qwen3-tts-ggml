@@ -1,5 +1,6 @@
 #include "synthesizer.h"
 
+#include <algorithm>
 #include <chrono>
 #include <random>
 #include <stdexcept>
@@ -74,7 +75,9 @@ int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, 
         if (!sink(audio.data(), audio.size())) stopped = true;
     };
 
-    while (frames < r.max_frames && !stopped) {
+    // Every frame takes one position of the talker's cache after the prompt's.
+    const int max_frames = std::min(r.max_frames, talker_.n_ctx() - prompt.n);
+    while (frames < max_frames && !stopped) {
         std::vector<bool> b = banned;
         // The official generate() asks for at least two frames before the end of speech.
         if (frames < 2) b[ids_.codec_eos] = true;
