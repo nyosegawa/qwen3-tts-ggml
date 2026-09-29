@@ -21,6 +21,11 @@ struct SynthesisRequest {
     uint64_t seed = 0;
 };
 
+/** Where the time of one synthesis went, in seconds. */
+struct SynthesisStats {
+    double prompt = 0, talker = 0, code_predictor = 0, codec = 0;
+};
+
 /** Called with each piece of 24 kHz audio as it is decoded; returning false stops the synthesis. */
 using AudioSink = std::function<bool(const float * samples, size_t n)>;
 
@@ -33,7 +38,8 @@ public:
      * Speaks `r.text`, decoding the first frame on its own so that audio starts as early as possible and
      * later frames `frames_per_piece` at a time. Returns the number of frames generated.
      */
-    int synthesize(const SynthesisRequest & r, const AudioSink & sink, int frames_per_piece = 4);
+    int synthesize(const SynthesisRequest & r, const AudioSink & sink, int frames_per_piece = 4,
+                   SynthesisStats * stats = nullptr);
 
     int sample_rate() const { return codec_.sample_rate(); }
     const PromptIds & ids() const { return ids_; }

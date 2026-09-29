@@ -1,5 +1,6 @@
 #include "synthesizer.h"
 
+#include <chrono>
 #include <random>
 #include <stdexcept>
 
@@ -14,13 +15,33 @@ Synthesizer::Synthesizer(const std::string & talker_path, const std::string & co
     }
 }
 
-int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, int frames_per_piece) {
-    std::vector<int32_t> text_ids = {ids_.im_start, ids_.assistant, ids_.newline};
-    const std::vector<int32_t> body = tokenizer_.encode(r.text);
-    if (body.empty()) throw std::runtime_error("the text is empty");
-    text_ids.insert(text_ids.end(), body.begin(), body.end());
-    text_ids.insert(text_ids.end(), {ids_.im_end, ids_.newline, ids_.im_start, ids_.assistant, ids_.newline});
-    const Prompt prompt = build_prompt(talker_, ids_, text_ids, r.speaker, r.language);
+namespace {
+
+/** Adds the seconds from its construction to its destruction to `total`, when `total` is set. */
+struct Timer {
+    double * total;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    ~Timer() {
+        if (total) *total += std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    }
+};
+
+}  // namespace
+
+int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, int frames_per_piece,
+                            SynthesisStats * stats) {
+    SynthesisStats local;
+    SynthesisStats & st = stats ? *stats : local;
+    Prompt prompt;
+    {
+        Timer t{&st.prompt};
+        std::vector<int32_t> text_ids = {ids_.im_start, ids_.assistant, ids_.newline};
+        const std::vector<int32_t> body = tokenizer_.encode(r.text);
+        if (body.empty()) throw std::runtime_error("the text is empty");
+        text_ids.insert(text_ids.end(), body.begin(), body.end());
+        text_ids.insert(text_ids.end(), {ids_.im_end, ids_.newline, ids_.im_start, ids_.assistant, ids_.newline});
+        prompt = build_prompt(talker_, ids_, text_ids, r.speaker, r.language);
+    }
 
     const int n_groups = talker_.num_code_groups();
     const int vocab = talker_.vocab();
@@ -31,7 +52,10 @@ int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, 
     const std::vector<bool> none;
     std::mt19937_64 rng(r.seed);
 
-    talker_.prefill(prompt.embeds, prompt.n);
+    {
+        Timer t{&st.talker};
+        talker_.prefill(prompt.embeds, prompt.n);
+    }
     codec_.reset();
     std::vector<int32_t> history, frame(n_groups), pending;
     std::vector<float> audio;
@@ -41,7 +65,10 @@ int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, 
     auto flush = [&]() {
         if (pending_frames == 0) return;
         audio.clear();
-        codec_.decode(pending.data(), pending_frames, audio);
+        {
+            Timer t{&st.codec};
+            codec_.decode(pending.data(), pending_frames, audio);
+        }
         pending.clear();
         pending_frames = 0;
         if (!sink(audio.data(), audio.size())) stopped = true;
@@ -54,15 +81,19 @@ int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, 
         frame[0] = sample(talker_.logits(), r.talker, history, b, rng);
         if (frame[0] == ids_.codec_eos) break;
         history.push_back(frame[0]);
-        frame[1] = sample(talker_.cp_begin(frame[0]), r.code_predictor, {}, none, rng);
-        for (int g = 1; g < n_groups - 1; g++) {
-            frame[g + 1] = sample(talker_.cp_next(g, frame[g]), r.code_predictor, {}, none, rng);
+        {
+            Timer t{&st.code_predictor};
+            frame[1] = sample(talker_.cp_begin(frame[0]), r.code_predictor, {}, none, rng);
+            for (int g = 1; g < n_groups - 1; g++) {
+                frame[g + 1] = sample(talker_.cp_next(g, frame[g]), r.code_predictor, {}, none, rng);
+            }
         }
         pending.insert(pending.end(), frame.begin(), frame.end());
         pending_frames++;
         frames++;
         if (frames == 1 || pending_frames >= frames_per_piece) flush();
         if (stopped) break;
+        Timer t{&st.talker};
         talker_.step(frame.data(), prompt.frame_extra);
     }
     if (!stopped) flush();

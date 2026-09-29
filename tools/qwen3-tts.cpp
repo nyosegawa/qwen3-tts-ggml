@@ -52,15 +52,19 @@ int main(int argc, char ** argv) {
     std::vector<float> pcm;
     double first_audio_s = -1;
     const auto t0 = std::chrono::steady_clock::now();
+    SynthesisStats stats;
     const int frames = synth.synthesize(r, [&](const float * s, size_t n) {
         if (first_audio_s < 0) first_audio_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
         pcm.insert(pcm.end(), s, s + n);
         return true;
-    });
+    }, 4, &stats);
     const double total_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     const double audio_s = (double) pcm.size() / synth.sample_rate();
     std::printf("backend %s, load %.2f s, %d frames, %.2f s of audio, first audio %.3f s, total %.3f s, RTF %.3f\n",
                 ggml_backend_name(backend), load_s, frames, audio_s, first_audio_s, total_s, total_s / audio_s);
+    std::printf("per frame: talker %.1f ms, code predictor %.1f ms, codec %.1f ms (prompt %.1f ms once)\n",
+                1000 * stats.talker / frames, 1000 * stats.code_predictor / frames, 1000 * stats.codec / frames,
+                1000 * stats.prompt);
     write_wav(argv[6], pcm, synth.sample_rate());
     ggml_backend_free(backend);
     return 0;
