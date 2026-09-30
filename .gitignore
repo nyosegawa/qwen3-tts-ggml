@@ -1,6 +1,6 @@
 build/
 models/
-reference/out/
+reference/*/out/
 .venv/
 __pycache__/
 *.gguf

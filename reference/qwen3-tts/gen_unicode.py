@@ -1,7 +1,7 @@
-"""Writes src/unicode-ranges.inc: the code point ranges of letters (L), numbers (N) and whitespace that
+"""Writes families/qwen3-tts/unicode-ranges.inc: the code point ranges of letters (L), numbers (N) and whitespace that
 the Qwen2 pre-tokenizer's \\p{L}, \\p{N} and \\s match.
 
-usage: uv run python gen_unicode.py ../src/unicode-ranges.inc
+usage: uv run python gen_unicode.py ../../families/qwen3-tts/unicode-ranges.inc
 """
 
 import sys

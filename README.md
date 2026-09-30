@@ -25,8 +25,8 @@ A synthesis needs one talker (`qwen3-tts-0.6b-customvoice-q8_0.gguf` or
 To convert them yourself from the official checkpoints:
 
 ```sh
-cd reference
-uv run python convert.py <Qwen3-TTS-12Hz-1.7B-CustomVoice dir> ../models/gguf --type q8_0 --codec-type f16
+cd reference/qwen3-tts
+uv run python convert.py <Qwen3-TTS-12Hz-1.7B-CustomVoice dir> ../../models/gguf --type q8_0 --codec-type f16
 ```
 
 ## Binaries

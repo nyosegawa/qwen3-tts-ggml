@@ -14,16 +14,16 @@ set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(ggml)
 
 add_library(qwen3tts
-    src/model-file.cpp
-    src/backend.cpp
-    src/codec.cpp
-    src/talker.cpp
-    src/prompt.cpp
-    src/sampler.cpp
-    src/tokenizer.cpp
-    src/synthesizer.cpp
+    families/qwen3-tts/model-file.cpp
+    families/qwen3-tts/backend.cpp
+    families/qwen3-tts/codec.cpp
+    families/qwen3-tts/talker.cpp
+    families/qwen3-tts/prompt.cpp
+    families/qwen3-tts/sampler.cpp
+    families/qwen3-tts/tokenizer.cpp
+    families/qwen3-tts/synthesizer.cpp
 )
-target_include_directories(qwen3tts PUBLIC src)
+target_include_directories(qwen3tts PUBLIC families/qwen3-tts)
 target_link_libraries(qwen3tts PUBLIC ggml)
 
 add_executable(codec-check tools/codec-check.cpp)
