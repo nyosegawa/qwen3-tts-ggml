@@ -1,11 +1,45 @@
-# qwen3-tts-ggml
+# speech.cpp
 
-Qwen3-TTS 12Hz CustomVoice in C++ on [ggml](https://github.com/ggml-org/ggml), for the named speakers
-(`ono_anna`, `ryan`, ...). It decodes audio frame by frame with the same samples as decoding the whole
-utterance, so streaming does not add artifacts at the frame boundaries. It targets Metal, Vulkan and
-CUDA; it has been checked on Metal, on Vulkan (NVIDIA) and on the CPU.
+The speech models of [ASIST](https://github.com/nyosegawa/asist) in C++ on [ggml](https://github.com/ggml-org/ggml),
+run as one worker process that ASIST starts. It targets Metal, Vulkan and CUDA; it is checked on Metal,
+on Vulkan (NVIDIA) and on the CPU. It implements only what ASIST uses from each model, and checks every
+stage of a port against the official implementation.
 
-It is written for [ASIST](https://github.com/nyosegawa/asist) and implements only what ASIST uses:
+| Family | Model | Task | Converted weights |
+|---|---|---|---|
+| Qwen3-TTS | Qwen3-TTS 12Hz 0.6B and 1.7B CustomVoice | speech synthesis with the named speakers, streamed frame by frame | [sakasegawa/qwen3-tts-ggml](https://huggingface.co/sakasegawa/qwen3-tts-ggml) |
+
+## Binaries
+
+[Releases](https://github.com/nyosegawa/speech.cpp/releases) carry the tools built for macOS arm64
+(Metal) and Windows x64 (Vulkan), with their SHA-256 sums. The Vulkan build needs no particular driver
+version; on the first run the GPU driver compiles its shaders, which takes seconds and is cached by the
+driver until it is updated.
+
+## Build
+
+```sh
+git clone --recurse-submodules https://github.com/nyosegawa/speech.cpp.git
+cd speech.cpp
+cmake -B build                  # Metal on macOS, the CPU elsewhere
+cmake --build build --config Release -j
+```
+
+For Vulkan or CUDA, configure with `-DGGML_VULKAN=ON` (the Vulkan SDK is needed to build) or
+`-DGGML_CUDA=ON` instead.
+
+## Layout
+
+- `families/<family>/` runs one architecture of model, whichever weights it is given.
+- `tools/` holds the worker, a command-line tool per family, and the checks that compare each stage with
+  the official implementation.
+- `reference/<model>/` pins the official implementation in a uv environment, converts its weights to GGUF
+  and dumps the tensors the checks compare with.
+
+## Qwen3-TTS
+
+It decodes audio frame by frame with the same samples as decoding the whole utterance, so streaming does
+not add artifacts at the frame boundaries. Implemented:
 
 - the talker (a Qwen3 decoder) that predicts the first codebook of each frame,
 - the code predictor that predicts the other 15 codebooks,
@@ -16,39 +50,19 @@ It is written for [ASIST](https://github.com/nyosegawa/asist) and implements onl
 
 Voice cloning, VoiceDesign, the codec encoder and the speaker encoder are out of scope.
 
-## Models
+### Models
 
-Converted GGUF files are on Hugging Face: [sakasegawa/qwen3-tts-ggml](https://huggingface.co/sakasegawa/qwen3-tts-ggml).
 A synthesis needs one talker (`qwen3-tts-0.6b-customvoice-q8_0.gguf` or
-`qwen3-tts-1.7b-customvoice-q8_0.gguf`) and the codec (`qwen3-tts-codec-12hz-f16.gguf`).
-
-To convert them yourself from the official checkpoints:
+`qwen3-tts-1.7b-customvoice-q8_0.gguf`) and the codec (`qwen3-tts-codec-12hz-f16.gguf`) from
+[sakasegawa/qwen3-tts-ggml](https://huggingface.co/sakasegawa/qwen3-tts-ggml). To convert them yourself
+from the official checkpoints:
 
 ```sh
 cd reference/qwen3-tts
 uv run python convert.py <Qwen3-TTS-12Hz-1.7B-CustomVoice dir> ../../models/gguf --type q8_0 --codec-type f16
 ```
 
-## Binaries
-
-[Releases](https://github.com/nyosegawa/qwen3-tts-ggml/releases) carry the tools built for macOS arm64
-(Metal) and Windows x64 (Vulkan), with their SHA-256 sums. The Vulkan build needs no particular driver
-version; on the first run the GPU driver compiles its shaders, which takes seconds and is cached by the
-driver until it is updated.
-
-## Build
-
-```sh
-git clone --recurse-submodules https://github.com/nyosegawa/qwen3-tts-ggml.git
-cd qwen3-tts-ggml
-cmake -B build                  # Metal on macOS, the CPU elsewhere
-cmake --build build --config Release -j
-```
-
-For Vulkan or CUDA, configure with `-DGGML_VULKAN=ON` (the Vulkan SDK is needed to build) or
-`-DGGML_CUDA=ON` instead.
-
-## Use
+### Use
 
 ```sh
 build/qwen3-tts <talker.gguf> <codec.gguf> ono_anna japanese "明日の東京は晴れです。" out.wav
@@ -60,10 +74,10 @@ of `tools/qwen3-tts-worker.cpp`). `qwen3-tts-worker --devices` lists the devices
 their memory, and `--device <name>` (for example `Vulkan1`) runs the worker on one of them instead of
 the first GPU.
 
-## Accuracy
+### Accuracy
 
-`reference/dump.py` runs the official implementation with greedy decoding and saves the tensors of
-every stage; the check tools compare against them.
+`reference/qwen3-tts/dump.py` runs the official implementation with greedy decoding and saves the tensors
+of every stage; the check tools compare against them.
 
 | Check | Result |
 |---|---|
@@ -77,7 +91,7 @@ The tokenizer follows the pre-tokenizer of the `tokenizer.json` that ships with 
 package loads it through transformers 4.57.3 with `fix_mistral_regex=True`, which swaps in Mistral's
 pattern; the two differ on Latin words in mixed case, contractions and `/`.
 
-## Speed
+### Speed
 
 Q8_0 weights, Japanese sentences, after the shaders are compiled:
 
@@ -90,4 +104,5 @@ Q8_0 weights, Japanese sentences, after the shaders are compiled:
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The model weights are the Qwen team's, under the Apache License 2.0.
+MIT, see [LICENSE](LICENSE). The model weights are their authors': Qwen3-TTS is the Qwen team's, under the
+Apache License 2.0.
