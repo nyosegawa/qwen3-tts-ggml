@@ -31,6 +31,12 @@ cmake --build build --config Release -j
 For Vulkan or CUDA, configure with `-DGGML_VULKAN=ON` (the Vulkan SDK is needed to build) or
 `-DGGML_CUDA=ON` instead.
 
+On Metal, every tool turns off Metal 4's tensor API before it starts a device. ggml uses that API on the
+M5 and later chips, and its matrix kernel in ggml v0.25.3 writes past its output when the output has 64
+modulo 128 columns; on an M5 this turned a codec window of 64 frames into noise
+([#13](https://github.com/nyosegawa/speech.cpp/issues/13)). Without it Metal comes closer to the CPU, and on
+the M5 Irodori-TTS takes a fifth to a third longer to its first audio while Qwen3-TTS keeps its speed.
+
 ## Layout
 
 - `families/<family>/` runs one architecture of model, whichever weights it is given.
@@ -147,7 +153,7 @@ of every stage; the check tools compare against them.
 |---|---|
 | Codec decoder, whole utterance, CPU, F32 (`codec-check`) | 114 dB SNR against the official decoder |
 | Codec decoder, one frame at a time against whole, CPU | 133 dB SNR |
-| Codec decoder on Metal | error at -52 dB of the voice, at the level of 16-bit rounding in silence |
+| Codec decoder on Metal | error at -63 dB of the voice |
 | Talker and code predictor, F32, teacher forcing (`talker-check`) | argmax matches on every frame; greedy decode gives the same 54 frames |
 | Tokenizer (`tokenizer-check`) | matches the model's `tokenizer.json` on 19 texts |
 
@@ -161,8 +167,8 @@ Q8_0 weights, Japanese sentences, after the shaders are compiled:
 
 | Model | Device | First audio | Real-time factor | VRAM |
 |---|---|---|---|---|
-| 0.6B | Apple M5, Metal | 0.05 s | 0.35 | |
-| 1.7B | Apple M5, Metal | 0.08 s | 0.49 | |
+| 0.6B | Apple M5, Metal | 0.04 s | 0.38 | |
+| 1.7B | Apple M5, Metal | 0.07 s | 0.48 | |
 | 0.6B | RTX 2080, Vulkan | 0.07 s | 0.31 | 1.6 GB |
 | 1.7B | RTX 2080, Vulkan | 0.08 s | 0.36 | 2.7 GB |
 
@@ -213,23 +219,23 @@ saves every stage; the check tools compare each stage, given the dump's own inpu
 | Check | CPU, F32 | Metal, F32 | Vulkan, F16 model and F32 codec |
 |---|---|---|---|
 | Normalization and tokenizer, 51 texts (`irodori-text-check`) | all equal | all equal | all equal |
-| Text condition (`irodori-text-check`) | 118 to 123 dB SNR | 57 to 123 dB | 65 to 74 dB |
+| Text condition (`irodori-text-check`) | 118 to 123 dB SNR | 65 to 123 dB | 65 to 74 dB |
 | Reference latent (`irodori-codec-check`) | 99 dB | 40 dB | 33 dB |
-| Speaker condition (`irodori-condition-check`) | 111 dB | 47 dB | 51 dB |
+| Speaker condition (`irodori-condition-check`) | 111 dB | 51 dB | 51 dB |
 | Predicted length | the official frames on every dump | the same | the same |
-| DiT steps, MF and RF (`irodori-dit-check`) | 95 dB or more | 48 dB or more | 63 dB or more (MF) |
-| Sampled latent, MF / RF 40 steps | 86 to 122 dB / 109 to 111 dB | 33 to 61 dB / 50 to 54 dB | 66 dB (MF, 27 frames) |
-| Decoded audio (`irodori-codec-check`) | 119 dB | 47 dB | 68 dB |
+| DiT steps, MF and RF (`irodori-dit-check`) | 95 dB or more | 46 dB or more | 63 dB or more (MF) |
+| Sampled latent, MF / RF 40 steps | 86 to 122 dB / 109 to 111 dB | 36 to 67 dB / 59 to 67 dB | 66 dB (MF, 27 frames) |
+| Decoded audio (`irodori-codec-check`) | 119 dB | 68 dB | 68 dB |
 | Decoding in windows against at once | equal | equal | 89 dB (encoder), equal (decoder) |
-| Whole synthesis from the dump's noise (`irodori-synthesis-check`) | 75 to 110 dB, the same length | 22 to 41 dB, the same length | 58 dB (MF, 27 frames), the same length |
+| Whole synthesis from the dump's noise (`irodori-synthesis-check`) | 75 to 110 dB, the same length | 22 to 61 dB, the same length | 58 dB (MF, 27 frames), the same length |
 
 The Metal and Vulkan columns were measured on an Apple M5 and an RTX 2080 with driver 591.86.
 
 Metal's matrix kernel rounds both its inputs to half precision (`kernel_mul_mm_f32_f32` keeps its tiles as
 `half`), which is the gap between the CPU and Metal; MeanFlow's four large steps carry it into the latent,
 so on Metal the audio is the same speech rather than the same waveform. Vulkan accumulates in float32 as
-the port asks. The codec on a GPU is checked against the CPU as well: on Metal its error lies 47 dB below the
-voice and on Vulkan 68 dB, and the quietest tenth of the 20 ms frames stays as quiet as on the CPU (-77 and
+the port asks. The codec on a GPU is checked against the CPU as well: on Metal its error lies 68 dB below the
+voice and on Vulkan 68 dB, and the quietest tenth of the 20 ms frames stays as quiet as on the CPU (-78 and
 -76 dBFS against -76). audio.cpp v0.8.2's Irodori-TTS adds a distorted copy of the voice 14 dB below it on
 Metal and raises the quiet parts to -60 dBFS.
 
@@ -240,10 +246,10 @@ one request at a time, after the worker is ready:
 
 | Model | Device | Median first audio | p90 first audio | Real-time factor | Memory |
 |---|---|---|---|---|---|
-| v4.1-Small-MF F16, 4 steps | Apple M5, Metal | 0.19 s | 0.35 s | 0.15 | 2.2 GB |
-| v4.1-Small-MF Q8_0, 4 steps | Apple M5, Metal | 0.19 s | 0.34 s | 0.15 | 1.5 GB |
-| v4.1-Small F16, 16 steps | Apple M5, Metal | 0.85 s | 2.25 s | 0.28 | 2.2 GB |
-| v4.1-Small F16, 40 steps | Apple M5, Metal | 2.01 s | 5.52 s | 0.49 | 2.2 GB |
+| v4.1-Small-MF F16, 4 steps | Apple M5, Metal | 0.23 s | 0.51 s | 0.17 | 2.2 GB |
+| v4.1-Small-MF Q8_0, 4 steps | Apple M5, Metal | 0.25 s | 0.51 s | 0.18 | 1.5 GB |
+| v4.1-Small F16, 16 steps | Apple M5, Metal | 1.12 s | 3.29 s | 0.34 | 2.2 GB |
+| v4.1-Small F16, 40 steps | Apple M5, Metal | 2.64 s | 8.04 s | 0.64 | 2.2 GB |
 | v4.1-Small-MF F16, 4 steps | RTX 2080, Vulkan | 0.13 s | 0.23 s | 0.10 | 2.1 GB |
 | v4.1-Small-MF Q8_0, 4 steps | RTX 2080, Vulkan | 0.13 s | 0.22 s | 0.07 | 1.5 GB |
 | v4.1-Small F16, 16 steps | RTX 2080, Vulkan | 0.49 s | 1.13 s | 0.14 | 2.2 GB |

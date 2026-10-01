@@ -4,8 +4,11 @@
 
 #include "ggml-backend.h"
 
-/** Lets only ggml's warnings and errors through to stderr; call it before touching any device. */
-void quiet_ggml_logs();
+/**
+ * Sets ggml up for this process: only its warnings and errors reach stderr, and Metal does not run matrix
+ * products through Metal 4's tensor API. Call it before touching any device.
+ */
+void configure_ggml();
 
 /**
  * The backend of the device named `name` as `--devices` lists it (MTL0, Vulkan0, Vulkan1, CPU), "cpu"
