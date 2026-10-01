@@ -70,6 +70,22 @@ float ModelFile::f32(const std::string & key) const {
     return gguf_get_val_f32(gguf_, key_id(key));
 }
 
+std::string ModelFile::str(const std::string & key) const {
+    const int64_t id = key_id(key);
+    if (gguf_get_kv_type(gguf_, id) != GGUF_TYPE_STRING) throw std::runtime_error("key " + key + " is not a string");
+    return gguf_get_val_str(gguf_, id);
+}
+
+std::vector<double> ModelFile::f64_array(const std::string & key) const {
+    const int64_t id = key_id(key);
+    if (gguf_get_arr_type(gguf_, id) != GGUF_TYPE_FLOAT64) {
+        throw std::runtime_error("key " + key + " is not an array of float64");
+    }
+    const size_t n = gguf_get_arr_n(gguf_, id);
+    const double * data = (const double *) gguf_get_arr_data(gguf_, id);
+    return std::vector<double>(data, data + n);
+}
+
 std::vector<int32_t> ModelFile::i32_array(const std::string & key) const {
     const int64_t id = key_id(key);
     const size_t n = gguf_get_arr_n(gguf_, id);
