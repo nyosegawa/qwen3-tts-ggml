@@ -26,6 +26,8 @@
 #include "reference.h"
 #include "wav.h"
 
+using namespace irodori;
+
 namespace {
 
 double seconds_since(std::chrono::steady_clock::time_point t0) {

@@ -2,6 +2,8 @@
 
 #include <vector>
 
+namespace irodori {
+
 /**
  * The integrated loudness of mono audio in LUFS (ITU-R BS.1770-4) as audiotools measures it on the CPU:
  * pyloudnorm's K-weighting filters, 400 ms blocks every 100 ms with the last one padded with silence,
@@ -14,3 +16,5 @@ double integrated_loudness(const std::vector<float> & samples, int sample_rate);
  * scale down when a sample exceeds 1.
  */
 std::vector<float> normalize_loudness(const std::vector<float> & samples, int sample_rate, double target_lufs);
+
+}  // namespace irodori

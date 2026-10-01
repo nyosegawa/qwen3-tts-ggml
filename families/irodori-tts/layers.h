@@ -6,6 +6,8 @@
 #include "graph.h"
 #include "model-file.h"
 
+namespace irodori {
+
 /** The building blocks Irodori-TTS's own modules share, on channel-first activations. */
 struct Layers {
     ggml_context * ctx;
@@ -48,3 +50,5 @@ struct Layers {
         return ggml_add(ctx, ggml_mul(ctx, x, ggml_scale_bias(ctx, scale, 1.0f, 1.0f)), shift);
     }
 };
+
+}  // namespace irodori

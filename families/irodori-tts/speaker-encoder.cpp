@@ -5,6 +5,8 @@
 
 #include "layers.h"
 
+namespace irodori {
+
 /*
  * Each head's query and key get their own RMSNorm, then RoPE that rotates neighbouring pairs of channels
  * (GGML_ROPE_TYPE_NORMAL, the complex multiplication of the official model) across the whole head.
@@ -54,3 +56,5 @@ ggml_tensor * SpeakerEncoder::build(Graph & g, const std::vector<float> & latent
     ggml_tensor * mean = ggml_reshape_2d(ctx, ggml_mean(ctx, ggml_cont(ctx, ggml_transpose(ctx, x))), dim_, 1);
     return ggml_concat(ctx, mean, x, 1);
 }
+
+}  // namespace irodori

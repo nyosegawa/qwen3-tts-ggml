@@ -18,6 +18,8 @@
 #include "npy.h"
 #include "speaker-encoder.h"
 
+using namespace irodori;
+
 namespace {
 
 /** An integer member of the dump's meta.json. */

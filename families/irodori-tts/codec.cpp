@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <stdexcept>
 
+namespace irodori {
+
 /*
  * Activations are channel-first ([channels, samples], ne0 = channels), so a convolution of width K runs as
  * K matrix products, one per tap, over views of its input shifted in time. A strided convolution of width
@@ -99,6 +101,7 @@ Codec::Codec(const std::string & path, ggml_backend_t backend) : backend_(backen
     latent_dim_ = (int) model_->u32("dacvae.latent_dim");
     encoder_rates_ = model_->i32_array("dacvae.encoder_rates");
     decoder_rates_ = model_->i32_array("dacvae.decoder_rates");
+    source_ = model_->str("general.source.url");
     allocr_ = ggml_gallocr_new(ggml_backend_get_default_buffer_type(backend_));
 }
 
@@ -182,3 +185,5 @@ void Codec::decode(const std::vector<float> & latent, int64_t samples, int first
         a = b;
     }
 }
+
+}  // namespace irodori

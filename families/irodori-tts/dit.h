@@ -5,6 +5,8 @@
 #include "graph.h"
 #include "model-file.h"
 
+namespace irodori {
+
 /** What the DiT attends to besides the latent: the text and speaker conditions, channel-first. */
 struct Conditions {
     std::vector<float> text;
@@ -43,3 +45,5 @@ private:
 
 /** The official get_timestep_embedding(): cos then sin of t at 256 frequencies, in float32. */
 std::vector<float> timestep_embedding(float t, int dim);
+
+}  // namespace irodori

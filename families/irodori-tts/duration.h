@@ -3,6 +3,8 @@
 #include "graph.h"
 #include "model-file.h"
 
+namespace irodori {
+
 /**
  * The duration predictor of v4.1: a stack of SwiGLU blocks over the text condition's tokens, each
  * modulated by the speaker's summary and, without a caption, by the learned null caption. Each token
@@ -27,3 +29,5 @@ private:
     int layers_, min_frames_, max_frames_;
     float eps_;
 };
+
+}  // namespace irodori

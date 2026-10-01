@@ -6,6 +6,8 @@
 #include "graph.h"
 #include "model-file.h"
 
+namespace irodori {
+
 /**
  * The text condition: ModernBERT-ja on the tokens, then the residual projector and the norm that map
  * its 768 channels to the DiT's text space.
@@ -32,3 +34,5 @@ private:
     float eps_, norm_eps_, theta_global_, theta_local_;
     std::vector<int32_t> global_;
 };
+
+}  // namespace irodori

@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <stdexcept>
 
+namespace irodori {
+
 namespace {
 
 /** The Unigram path ends at a byte offset; `start` is where its last piece starts, -1 while unreached. */
@@ -122,3 +124,5 @@ void Tokenizer::encode_piece(const std::string & s, std::vector<int32_t> & ids) 
         for (unsigned char b : it->first) ids.push_back(bytes_[b]);
     }
 }
+
+}  // namespace irodori

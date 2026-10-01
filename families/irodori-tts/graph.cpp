@@ -3,6 +3,8 @@
 #include <cstring>
 #include <stdexcept>
 
+namespace irodori {
+
 Graph::Graph(int max_nodes) {
     ggml_init_params params = {ggml_tensor_overhead() * max_nodes + ggml_graph_overhead_custom(max_nodes, false),
                                nullptr, true};
@@ -56,3 +58,5 @@ std::vector<float> Graph::read(const ggml_tensor * t) {
     ggml_backend_tensor_get(t, out.data(), 0, ggml_nbytes(t));
     return out;
 }
+
+}  // namespace irodori

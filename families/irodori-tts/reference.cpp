@@ -5,6 +5,8 @@
 #include "loudness.h"
 #include "wav.h"
 
+namespace irodori {
+
 std::vector<float> encode_reference(Codec & codec, const std::string & wav_path, double max_seconds) {
     const Wav wav = read_wav(wav_path);
     if (wav.sample_rate != codec.sample_rate()) {
@@ -19,3 +21,5 @@ std::vector<float> encode_reference(Codec & codec, const std::string & wav_path,
     }
     return codec.encode(normalize_loudness(mono, wav.sample_rate, kReferenceLufs));
 }
+
+}  // namespace irodori

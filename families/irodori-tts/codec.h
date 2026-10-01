@@ -10,6 +10,8 @@
 #include "graph.h"
 #include "model-file.h"
 
+namespace irodori {
+
 /** Called with each piece of audio as it is decoded; returning false stops the decoding. */
 using AudioSink = std::function<bool(const float * samples, size_t n)>;
 
@@ -27,6 +29,8 @@ public:
     int sample_rate() const { return sample_rate_; }
     int hop() const { return hop_; }
     int latent_dim() const { return latent_dim_; }
+    /** Where the weights came from, with their revision; a voice file names it. */
+    const std::string & source() const { return source_; }
 
     /**
      * The latent, row-major [frames, latent_dim], of mono audio at sample_rate() as the official runtime
@@ -63,5 +67,8 @@ private:
     std::unique_ptr<ModelFile> model_;
     ggml_gallocr_t allocr_ = nullptr;
     int sample_rate_ = 0, hop_ = 0, latent_dim_ = 0;
+    std::string source_;
     std::vector<int32_t> encoder_rates_, decoder_rates_;
 };
+
+}  // namespace irodori

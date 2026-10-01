@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <string>
 
+namespace irodori {
+
 /*
  * Activations are channel-first ([channels, tokens]), so a linear layer is one matrix product. ModernBERT
  * rotates the two halves of each head (GGML_ROPE_TYPE_NEOX), with a larger base in its global layers.
@@ -77,3 +79,5 @@ ggml_tensor * TextEncoder::build(Graph & g, const std::vector<int32_t> & ids, st
     p = ggml_add(ctx, p, linear(r, "text.proj.res_down"));
     return ggml_mul(ctx, ggml_rms_norm(ctx, p, norm_eps_), m_.tensor("text.norm"));
 }
+
+}  // namespace irodori

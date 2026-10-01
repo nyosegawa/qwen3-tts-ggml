@@ -7,6 +7,8 @@
 #include "ggml-backend.h"
 #include "ggml.h"
 
+namespace irodori {
+
 /**
  * A matrix product that asks for float32 accumulation. Vulkan otherwise accumulates in half precision on
  * GPUs that have it; the CPU and Metal ignore the request (Metal rounds the inputs of its matrix kernel to
@@ -56,3 +58,5 @@ private:
     ggml_cgraph * gf_ = nullptr;
     std::vector<Upload> uploads_;
 };
+
+}  // namespace irodori

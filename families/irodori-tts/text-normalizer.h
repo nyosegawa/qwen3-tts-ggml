@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+namespace irodori {
+
 /** The code points of UTF-8 text; text that is not valid UTF-8 throws. */
 std::vector<uint32_t> decode_utf8(const std::string & text);
 
@@ -17,3 +19,5 @@ std::vector<uint32_t> nfkc(const std::vector<uint32_t> & text);
  * brackets that enclose the whole text, NFKC, and "..." written as "…".
  */
 std::string normalize_text(const std::string & text);
+
+}  // namespace irodori

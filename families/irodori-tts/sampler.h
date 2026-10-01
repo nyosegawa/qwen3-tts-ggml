@@ -8,6 +8,8 @@
 #include "ggml-alloc.h"
 #include "ggml-backend.h"
 
+namespace irodori {
+
 /** One step of a sampler as it ran: its time, the velocity it took, and the latent after it. */
 struct SamplerStep {
     int index;
@@ -51,3 +53,5 @@ private:
 
 /** Standard normal samples from a seed, the same on every platform (a Mersenne Twister and Box-Muller). */
 std::vector<float> gaussian_noise(uint64_t seed, size_t n);
+
+}  // namespace irodori
