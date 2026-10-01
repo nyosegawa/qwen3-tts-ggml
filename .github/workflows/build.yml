@@ -20,7 +20,7 @@ jobs:
           cmake --build build --config Release -j 4
       - uses: actions/upload-artifact@v4
         with:
-          name: qwen3-tts-macos-arm64-metal
+          name: speech-cpp-macos-arm64-metal
           path: |
             build/speech-worker
             build/qwen3-tts
@@ -50,7 +50,7 @@ jobs:
           cmake --build build --config Release -j 4
       - uses: actions/upload-artifact@v4
         with:
-          name: qwen3-tts-windows-x64-vulkan
+          name: speech-cpp-windows-x64-vulkan
           path: |
             build/Release/speech-worker.exe
             build/Release/qwen3-tts.exe
@@ -73,9 +73,13 @@ jobs:
       - name: Package
         run: |
           cd dist
-          # Artifacts lose the executable bit; the Mac binaries need it back.
-          (cd qwen3-tts-macos-arm64-metal && chmod +x * && zip -q "../qwen3-tts-ggml-${GITHUB_REF_NAME}-macos-arm64-metal.zip" *)
-          (cd qwen3-tts-windows-x64-vulkan && zip -q "../qwen3-tts-ggml-${GITHUB_REF_NAME}-windows-x64-vulkan.zip" *)
+          # Artifacts lose the executable bit; the Mac binaries need it back. ASIST bundles the worker alone,
+          # so the worker and the other tools go into separate archives.
+          for platform in macos-arm64-metal windows-x64-vulkan; do
+            (cd "speech-cpp-$platform" && chmod +x * && \
+              zip -q "../speech-worker-${GITHUB_REF_NAME}-$platform.zip" speech-worker* && \
+              zip -q "../speech-cpp-tools-${GITHUB_REF_NAME}-$platform.zip" $(ls | grep -v '^speech-worker'))
+          done
           sha256sum *.zip > SHA256SUMS
       - name: Release
         env:
@@ -83,4 +87,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
-            --notes "Binaries for macOS arm64 (Metal) and Windows x64 (Vulkan). The models are on https://huggingface.co/sakasegawa/qwen3-tts-ggml."
+            --notes "speech-worker and the other tools for macOS arm64 (Metal) and Windows x64 (Vulkan). The worker runs Qwen3-TTS, whose models are on https://huggingface.co/sakasegawa/qwen3-tts-ggml, and Irodori-TTS v4.1-Small-MF and v4.1-Small, whose models reference/irodori-tts converts (see the README)."

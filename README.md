@@ -12,10 +12,11 @@ stage of a port against the official implementation.
 
 ## Binaries
 
-[Releases](https://github.com/nyosegawa/speech.cpp/releases) carry the tools built for macOS arm64
-(Metal) and Windows x64 (Vulkan), with their SHA-256 sums. The Vulkan build needs no particular driver
-version; on the first run the GPU driver compiles its shaders, which takes seconds and is cached by the
-driver until it is updated.
+[Releases](https://github.com/nyosegawa/speech.cpp/releases) carry, for macOS arm64 (Metal) and Windows x64
+(Vulkan), `speech-worker-<version>-<platform>.zip` with the worker alone, which is what ASIST bundles, and
+`speech-cpp-tools-<version>-<platform>.zip` with the command-line tools and the checks, with their SHA-256
+sums. The Vulkan build needs no particular driver version; on the first run the GPU driver compiles its
+shaders, which takes seconds and is cached by the driver until it is updated.
 
 ## Build
 
