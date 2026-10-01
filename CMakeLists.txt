@@ -9,9 +9,16 @@ endif()
 
 # One executable per tool, with ggml linked in, so that a release is a single file per tool.
 option(BUILD_SHARED_LIBS "Build ggml as shared libraries" OFF)
-set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(ggml)
+# CI builds the submodule's ggml once, installs it with static libraries, and reuses it while the
+# submodule's commit stays the same; Vulkan's shaders alone take minutes to compile.
+option(SPEECH_INSTALLED_GGML "Link a ggml installed from the submodule, found through CMAKE_PREFIX_PATH" OFF)
+if (SPEECH_INSTALLED_GGML)
+    find_package(ggml REQUIRED CONFIG)
+else()
+    set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    add_subdirectory(ggml)
+endif()
 
 # Source files are UTF-8; MSVC otherwise reads them in the system code page.
 if (MSVC)
@@ -26,7 +33,7 @@ add_library(speechcommon
     common/language.cpp
 )
 target_include_directories(speechcommon PUBLIC common)
-target_link_libraries(speechcommon PUBLIC ggml)
+target_link_libraries(speechcommon PUBLIC ggml::ggml)
 if (WIN32)
     target_link_libraries(speechcommon PUBLIC shell32)
 endif()
