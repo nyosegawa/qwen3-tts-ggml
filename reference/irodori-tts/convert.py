@@ -3,7 +3,7 @@
 usage: uv run python convert.py <mf|rf> <out dir> [--type f32|f16|q8_0]
 
 Writes irodori-tts-v4.1-small-mf-<type>.gguf or irodori-tts-v4.1-small-<type>.gguf: the tokenizer, ModernBERT-ja
-and the projector that make the text condition, the speaker encoder and the duration predictor.
+and the projector that make the text condition, the speaker encoder, the duration predictor, and the DiT.
 
 Tensor shapes follow ggml, whose ne[0] is the last numpy axis: a Linear weight [out, in] is stored as is
 (ne = [in, out]). --type applies to the matrices whose rows are a multiple of 32; norms, biases and the
@@ -48,7 +48,16 @@ w.add_languages(["ja"])
 # The languages as BCP 47 tags; Irodori-TTS takes no language with a request.
 w.add_array("speech.languages", ["ja"])
 w.add_bool("speech.language_selectable", False)
-w.add_string("irodori.flow", config.get("flow_parameterization", "rf_velocity"))
+meanflow = config.get("flow_parameterization", "rf_velocity") == "meanflow"
+w.add_string("irodori.flow", "meanflow" if meanflow else "rf_velocity")
+# The runtime's sampler defaults: MeanFlow's steps, and RF's steps and its guidance against a branch without
+# the text and one without the speaker while t is in [0.5, 1].
+w.add_uint32("irodori.default_steps", 4 if meanflow else 40)
+if not meanflow:
+    w.add_float32("irodori.cfg_text", 3.0)
+    w.add_float32("irodori.cfg_speaker", 5.0)
+    w.add_float32("irodori.cfg_min_t", 0.5)
+    w.add_float32("irodori.cfg_max_t", 1.0)
 w.add_float32("irodori.norm_eps", float(config["norm_eps"]))
 w.add_uint32("irodori.max_text_tokens", int(config["max_text_len"]))
 w.add_float32("irodori.max_reference_seconds", float(config["ref_max_seconds"]))
@@ -79,6 +88,10 @@ w.add_uint32("irodori.speaker.num_heads", int(config["speaker_heads"]))
 w.add_uint32("irodori.speaker.patch_size", int(config["speaker_patch_size"]))
 assert config["duration_architecture"] == "token_sum_dual_adarn_zero_no_aux"
 w.add_uint32("irodori.duration.num_layers", int(config["duration_layers"]))
+w.add_uint32("irodori.dit.dim", int(config["model_dim"]))
+w.add_uint32("irodori.dit.num_layers", int(config["num_layers"]))
+w.add_uint32("irodori.dit.num_heads", int(config["num_heads"]))
+w.add_uint32("irodori.dit.timestep_dim", int(config["timestep_embed_dim"]))
 
 # The SentencePiece Unigram tokenizer, with its scores in float64 as tokenizer.json has them, since the
 # Viterbi path compares their sums.
@@ -185,6 +198,32 @@ add("duration.out_proj.weight", tensor(d + "token_out_proj.weight"), False)
 add("duration.out_proj.bias", tensor(d + "token_out_proj.bias"), False)
 add("duration.null_caption", tensor(d + "null_caption"), False)
 
+# The DiT. The caption's keys and values are left out: without a caption they are all masked.
+for i, layer in enumerate((0, 2, 4)):
+    add(f"dit.cond.{i}", tensor(f"cond_module.{layer}.weight"), True)
+    if meanflow:
+        add(f"dit.delta_cond.{i}", tensor(f"delta_cond_module.{layer}.weight"), True)
+add("dit.in_proj.weight", tensor("in_proj.weight"), False)
+add("dit.in_proj.bias", tensor("in_proj.bias"), False)
+for i in range(int(config["num_layers"])):
+    a, o = f"blocks.{i}.", f"dit.blk.{i}."
+    for x in ("q", "k", "v", "o"):
+        add(o + f"attn_{x}", tensor(a + f"attention.w{x}.weight"), True)
+    add(o + "attn_gate", tensor(a + "attention.gate.weight"), True)
+    for x in ("k", "v"):
+        add(o + f"attn_{x}_text", tensor(a + f"attention.w{x}_text.weight"), True)
+        add(o + f"attn_{x}_speaker", tensor(a + f"attention.w{x}_speaker.weight"), True)
+    add(o + "q_norm", tensor(a + "attention.q_norm.weight"), False)
+    add(o + "k_norm", tensor(a + "attention.k_norm.weight"), False)
+    swiglu(a + "mlp.", o)
+    for ada, out in (("attention_adaln", "attn_ada"), ("mlp_adaln", "ffn_ada")):
+        for part in ("shift", "scale", "gate"):
+            add(o + f"{out}.{part}.down", tensor(a + f"{ada}.{part}_down.weight"), True)
+            add(o + f"{out}.{part}.up.weight", tensor(a + f"{ada}.{part}_up.weight"), True)
+            add(o + f"{out}.{part}.up.bias", tensor(a + f"{ada}.{part}_up.bias"), False)
+add("dit.out_norm", tensor("out_norm.weight"), False)
+add("dit.out_proj.weight", tensor("out_proj.weight"), True)
+add("dit.out_proj.bias", tensor("out_proj.bias"), False)
 
 w.write_header_to_file()
 w.write_kv_data_to_file()
