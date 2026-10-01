@@ -168,7 +168,7 @@ int main(int argc, char ** argv) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stdin), _O_BINARY);
 #endif
-    quiet_ggml_logs();
+    configure_ggml();
     const std::vector<std::string> args = utf8_args(argc, argv);
     if (args.size() == 2 && args[1] == "--devices") {
         list_devices();
