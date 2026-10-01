@@ -35,6 +35,10 @@ ggml_tensor * Graph::input(const std::vector<int32_t> & data, int64_t ne0) {
     return t;
 }
 
+ggml_tensor * Graph::zeros(int64_t ne0, int64_t ne1) {
+    return input(std::vector<float>((size_t) (ne0 * ne1), 0.0f), ne0, ne1);
+}
+
 void Graph::output(ggml_tensor * t) {
     ggml_set_output(t);
     ggml_build_forward_expand(gf_, t);
