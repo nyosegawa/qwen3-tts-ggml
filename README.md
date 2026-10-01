@@ -81,13 +81,18 @@ The messages, one JSON object per line:
 
 Requests are served one at a time in arrival order. `speed` is accepted and has no effect.
 
+`languages` lists the languages as BCP 47 tags. A request's `language`, when given, must be one of them or
+a region or script of one (`ja`, `ja-JP`, `zh-Hant`), or `auto`; `auto` or no `language` leaves the choice
+to the model. Any other language is an error.
+
 - **Qwen3-TTS** streams frame by frame (`"streaming":"frame"`, 24 kHz). Its voices are the model's speakers,
-  and `languages` lists the names a request's `language` takes (`"auto"` when left out).
+  and it speaks `de`, `en`, `es`, `fr`, `it`, `ja`, `ko`, `pt`, `ru` and `zh` (`"languageSelectable":true`):
+  the language goes into its prompt. Two speakers speak a Chinese dialect, `dylan` (Beijing) and `eric`
+  (Sichuan), when the language is `zh` or left to the model, as in the official implementation.
 - **Irodori-TTS** makes a sentence at once and streams it as the codec decodes it (`"streaming":"sentence"`,
   48 kHz), so a request should be one sentence; a text longer than the model's 256 tokens is refused. Its
-  voices are those given with `--voice`. The model is not told a language: `languages` lists the BCP 47
-  tags it speaks, and a request's `language`, when given, must be one of them or a region of one (`ja`,
-  `ja-JP`).
+  voices are those given with `--voice`. It speaks `ja` and is not told a language
+  (`"languageSelectable":false`).
 
 ### Irodori-TTS voices
 
@@ -139,7 +144,7 @@ uv run python convert.py <Qwen3-TTS-12Hz-1.7B-CustomVoice dir> ../../models/gguf
 ### Use
 
 ```sh
-build/qwen3-tts <talker.gguf> <codec.gguf> ono_anna japanese "明日の東京は晴れです。" out.wav
+build/qwen3-tts <talker.gguf> <codec.gguf> ono_anna ja "明日の東京は晴れです。" out.wav
 ```
 
 `speech-worker <talker.gguf> <codec.gguf>` runs it behind the worker protocol (above).

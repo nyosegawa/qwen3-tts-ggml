@@ -14,7 +14,7 @@ public:
     Qwen3TtsEngine(const WorkerOptions & options, ggml_backend_t backend)
         : synth_(options.model, options.codec, backend, options.context) {
         voices_ = synth_.ids().speaker_names;
-        languages_ = synth_.ids().language_names;
+        languages_ = synth_.languages();
         std::sort(voices_.begin(), voices_.end());
         std::sort(languages_.begin(), languages_.end());
         if (voices_.empty()) throw std::runtime_error("the model has no preset voices");
