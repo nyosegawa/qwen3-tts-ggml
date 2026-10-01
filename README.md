@@ -16,7 +16,8 @@ stage of a port against the official implementation.
 (Vulkan), `speech-worker-<version>-<platform>.zip` with the worker alone, which is what ASIST bundles, and
 `speech-cpp-tools-<version>-<platform>.zip` with the command-line tools and the checks, with their SHA-256
 sums. The Vulkan build needs no particular driver version; on the first run the GPU driver compiles its
-shaders, which takes seconds and is cached by the driver until it is updated.
+shaders, which takes seconds and is cached by the driver until it is updated. The Metal build compiles its
+kernels on its first run as well (16 s for an Irodori-TTS worker on an Apple M5, 1.5 s on the runs after).
 
 ## Build
 
@@ -98,9 +99,10 @@ irodori-tts --make-voice irodori-tts-v4.1-small-mf-f16.gguf semantic-dacvae-japa
 ```
 
 For the 10.7 s reference bright-young-woman-10s.wav, the voice file is 35 KB against the WAVE file's 1 MB,
-and loads in 0.016 s on Metal against 0.72 s to encode the WAVE file (5.05 s on the CPU) on an Apple M5.
-Made on the CPU (`--device cpu`), its latent is the official encoder's to 99 dB SNR; on Metal it is 40 dB
-(see Accuracy below).
+and loads in 0.016 s on an Apple M5 (Metal) and 0.025 s on an RTX 2080 (Vulkan), against 0.72 s and 0.43 s
+to encode the WAVE file (5.05 s on the M5's CPU). Made on the CPU (`--device cpu`), its latent is the
+official encoder's to 99 dB SNR; on Metal it is 40 dB and on Vulkan 33 dB (see Accuracy below). ASIST
+carries voice files (docs/adr/0002).
 
 ## Qwen3-TTS
 
@@ -208,25 +210,28 @@ build/irodori-tts irodori-tts-v4.1-small-mf-f16.gguf semantic-dacvae-japanese-32
 `reference/irodori-tts/dump.py` runs the official implementation on the CPU in float32 with fixed noise and
 saves every stage; the check tools compare each stage, given the dump's own inputs, with it. Apple M5:
 
-| Check | CPU, F32 | Metal, F32 |
-|---|---|---|
-| Normalization and tokenizer, 51 texts (`irodori-text-check`) | all equal | all equal |
-| Text condition (`irodori-text-check`) | 118 to 123 dB SNR | 57 to 123 dB |
-| Reference latent (`irodori-codec-check`) | 99 dB | 40 dB |
-| Speaker condition (`irodori-condition-check`) | 111 dB | 47 dB |
-| Predicted length | the official frames on every dump | the same |
-| DiT steps, MF and RF (`irodori-dit-check`) | 95 dB or more | 48 dB or more |
-| Sampled latent, MF / RF 40 steps | 86 to 122 dB / 109 to 111 dB | 33 to 61 dB / 50 to 54 dB |
-| Decoded audio (`irodori-codec-check`) | 119 dB | 47 dB |
-| Decoding in windows against at once | equal | equal |
-| Whole synthesis from the dump's noise (`irodori-synthesis-check`) | 75 to 110 dB, the same length | 22 to 41 dB, the same length |
+| Check | CPU, F32 | Metal, F32 | Vulkan, F16 model and F32 codec |
+|---|---|---|---|
+| Normalization and tokenizer, 51 texts (`irodori-text-check`) | all equal | all equal | all equal |
+| Text condition (`irodori-text-check`) | 118 to 123 dB SNR | 57 to 123 dB | 65 to 74 dB |
+| Reference latent (`irodori-codec-check`) | 99 dB | 40 dB | 33 dB |
+| Speaker condition (`irodori-condition-check`) | 111 dB | 47 dB | 51 dB |
+| Predicted length | the official frames on every dump | the same | the same |
+| DiT steps, MF and RF (`irodori-dit-check`) | 95 dB or more | 48 dB or more | 63 dB or more (MF) |
+| Sampled latent, MF / RF 40 steps | 86 to 122 dB / 109 to 111 dB | 33 to 61 dB / 50 to 54 dB | 66 dB (MF, 27 frames) |
+| Decoded audio (`irodori-codec-check`) | 119 dB | 47 dB | 68 dB |
+| Decoding in windows against at once | equal | equal | 89 dB (encoder), equal (decoder) |
+| Whole synthesis from the dump's noise (`irodori-synthesis-check`) | 75 to 110 dB, the same length | 22 to 41 dB, the same length | 58 dB (MF, 27 frames), the same length |
+
+The Metal and Vulkan columns were measured on an Apple M5 and an RTX 2080 with driver 591.86.
 
 Metal's matrix kernel rounds both its inputs to half precision (`kernel_mul_mm_f32_f32` keeps its tiles as
-`half`), which is the gap between the two columns; MeanFlow's four large steps carry it into the latent, so
-on Metal the audio is the same speech rather than the same waveform. The codec on Metal is checked against
-the CPU as well: its error lies 47 dB below the voice, and the quietest tenth of the 20 ms frames stays as
-quiet as on the CPU (-77 against -76 dBFS). audio.cpp v0.8.2's Irodori-TTS adds a distorted copy of the voice
-14 dB below it on Metal and raises the quiet parts to -60 dBFS.
+`half`), which is the gap between the CPU and Metal; MeanFlow's four large steps carry it into the latent,
+so on Metal the audio is the same speech rather than the same waveform. Vulkan accumulates in float32 as
+the port asks. The codec on a GPU is checked against the CPU as well: on Metal its error lies 47 dB below the
+voice and on Vulkan 68 dB, and the quietest tenth of the 20 ms frames stays as quiet as on the CPU (-77 and
+-76 dBFS against -76). audio.cpp v0.8.2's Irodori-TTS adds a distorted copy of the voice 14 dB below it on
+Metal and raises the quiet parts to -60 dBFS.
 
 ### Speed
 
@@ -239,8 +244,13 @@ one request at a time, after the worker is ready:
 | v4.1-Small-MF Q8_0, 4 steps | Apple M5, Metal | 0.19 s | 0.34 s | 0.15 | 1.5 GB |
 | v4.1-Small F16, 16 steps | Apple M5, Metal | 0.85 s | 2.25 s | 0.28 | 2.2 GB |
 | v4.1-Small F16, 40 steps | Apple M5, Metal | 2.01 s | 5.52 s | 0.49 | 2.2 GB |
+| v4.1-Small-MF F16, 4 steps | RTX 2080, Vulkan | 0.13 s | 0.23 s | 0.10 | 2.1 GB |
+| v4.1-Small-MF Q8_0, 4 steps | RTX 2080, Vulkan | 0.13 s | 0.22 s | 0.07 | 1.5 GB |
+| v4.1-Small F16, 16 steps | RTX 2080, Vulkan | 0.49 s | 1.13 s | 0.14 | 2.2 GB |
 
-Memory is the worker's peak memory footprint with the F32 codec. The first audio comes after the text, the
+audio.cpp v0.8.2 took 1.22 s (M5) and 0.80 s (RTX 2080) to the median first audio with v4.1-Small at 16
+steps, answering with the whole sentence. Memory is the worker's peak memory footprint on the M5 and the
+rise of the GPU's memory on the RTX 2080, with the F32 codec. The first audio comes after the text, the
 whole sampler and the codec's first window, so it grows with the sentence.
 
 ## License
