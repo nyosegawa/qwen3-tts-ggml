@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include "language.h"
+
 PromptIds::PromptIds(const ModelFile & m) {
     tts_bos = (int32_t) m.u32("text.tts_bos_token_id");
     tts_eos = (int32_t) m.u32("text.tts_eos_token_id");
@@ -22,6 +24,7 @@ PromptIds::PromptIds(const ModelFile & m) {
     speaker_dialects = m.str_array("talker.speaker_dialects");
     language_names = m.str_array("talker.language_names");
     language_ids = m.i32_array("talker.language_ids");
+    language_tags = m.str_array("talker.language_tags");
 }
 
 static std::string lower(std::string s) {
@@ -40,6 +43,20 @@ int32_t PromptIds::language(const std::string & name) const {
     const auto it = std::find(language_names.begin(), language_names.end(), lower(name));
     if (it == language_names.end()) throw std::runtime_error("unknown language: " + name);
     return language_ids[it - language_names.begin()];
+}
+
+std::string PromptIds::language_name(const std::string & tag) const {
+    if (tag.empty() || lower(tag) == "auto") return "auto";
+    std::vector<std::string> spoken;
+    for (size_t i = 0; i < language_tags.size(); i++) {
+        if (language_tags[i].empty()) continue;
+        if (bcp47_matches(tag, language_tags[i])) return language_names[i];
+        spoken.push_back(language_tags[i]);
+    }
+    std::sort(spoken.begin(), spoken.end());
+    std::string list;
+    for (const std::string & s : spoken) list += (list.empty() ? "" : ", ") + s;
+    throw std::runtime_error("Qwen3-TTS speaks " + list + ", not " + tag);
 }
 
 std::string PromptIds::dialect(const std::string & name) const {

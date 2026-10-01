@@ -11,12 +11,12 @@
 //        {"type": "error", "id": "...", "error": "..."}
 //        {"type": "fatal", "error": "..."}
 //
-// Qwen3-TTS streams frame by frame ("streaming": "frame"); its voices are the model's speakers and its
-// languages the names a request's "language" takes ("auto" when left out). Irodori-TTS makes a sentence at
-// once and streams it as the codec decodes it ("streaming": "sentence"), so a request is one sentence; its
-// voices are the ones given with --voice, its languages BCP 47 tags, and a request's "language", when given,
-// must be one of them or a region of one, since the model is not told it ("languageSelectable": false); its
-// "steps" is the sampler's.
+// Every family lists its languages as BCP 47 tags, and a request's "language", when given, must be one of
+// them or a region or script of one ("ja", "ja-JP"); "auto" or no language leaves the choice to the model.
+// Qwen3-TTS streams frame by frame ("streaming": "frame"); its voices are the model's speakers, and the
+// language goes into its prompt. Irodori-TTS makes a sentence at once and streams it as the codec decodes it
+// ("streaming": "sentence"), so a request is one sentence; its voices are the ones given with --voice, the
+// model is not told the language ("languageSelectable": false), and its "steps" is the sampler's.
 //
 // Requests are served one at a time in arrival order. A cancel takes effect between two chunks, and a
 // request cancelled before it starts is dropped. `speed` is accepted and has no effect.

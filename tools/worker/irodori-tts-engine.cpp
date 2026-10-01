@@ -5,6 +5,7 @@
 
 #include "engine.h"
 #include "irodori-tts/synthesizer.h"
+#include "language.h"
 
 namespace {
 
@@ -43,7 +44,9 @@ public:
         // The model is not told a language; a request may still name one, which must be one it speaks.
         const std::string language = value(request, "language");
         if (!language.empty() && language != "auto" && !speaks(language)) {
-            throw std::runtime_error("Irodori-TTS speaks " + json_array(languages_) + ", not " + language);
+            std::string list;
+            for (const std::string & l : languages_) list += (list.empty() ? "" : ", ") + l;
+            throw std::runtime_error("Irodori-TTS speaks " + list + ", not " + language);
         }
         irodori::Request r;
         r.text = value(request, "text");
@@ -58,10 +61,10 @@ private:
         return it == request.end() ? "" : it->second;
     }
 
-    /** Whether a BCP 47 tag is one of the model's languages, or a region of one. */
+    /** Whether a BCP 47 tag names one of the model's languages. */
     bool speaks(const std::string & tag) const {
         for (const std::string & l : languages_) {
-            if (tag == l || (tag.size() > l.size() && tag.compare(0, l.size(), l) == 0 && tag[l.size()] == '-')) return true;
+            if (bcp47_matches(tag, l)) return true;
         }
         return false;
     }

@@ -14,6 +14,7 @@
 struct SynthesisRequest {
     std::string text;
     std::string speaker;
+    /** A BCP 47 tag of one of the model's languages (`ja`, `ja-JP`), or "auto". */
     std::string language = "auto";
     SamplingParams talker{false, 0.9f, 50, 1.0f, 1.05f};
     SamplingParams code_predictor{false, 0.9f, 50, 1.0f, 1.0f};
@@ -45,6 +46,8 @@ public:
     /** The talker's general.name, such as Qwen3-TTS-12Hz-1.7B-CustomVoice. */
     std::string talker_name() const { return talker_.model().str("general.name"); }
     const PromptIds & ids() const { return ids_; }
+    /** The BCP 47 tags of the languages a request may name. */
+    std::vector<std::string> languages() const { return talker_.model().str_array("speech.languages"); }
 
 private:
     Talker talker_;

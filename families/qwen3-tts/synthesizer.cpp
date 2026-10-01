@@ -41,7 +41,7 @@ int Synthesizer::synthesize(const SynthesisRequest & r, const AudioSink & sink, 
         if (body.empty()) throw std::runtime_error("the text is empty");
         text_ids.insert(text_ids.end(), body.begin(), body.end());
         text_ids.insert(text_ids.end(), {ids_.im_end, ids_.newline, ids_.im_start, ids_.assistant, ids_.newline});
-        prompt = build_prompt(talker_, ids_, text_ids, r.speaker, r.language);
+        prompt = build_prompt(talker_, ids_, text_ids, r.speaker, ids_.language_name(r.language));
     }
 
     const int n_groups = talker_.num_code_groups();

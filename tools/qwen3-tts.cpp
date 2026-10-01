@@ -1,4 +1,5 @@
-// Speaks a text into a WAV file and reports how long the first audio and the whole took.
+// Speaks a text into a WAV file and reports how long the first audio and the whole took. The language is a
+// BCP 47 tag (ja, en) or auto.
 //
 // usage: qwen3-tts <talker.gguf> <codec.gguf> <speaker> <language> <text> <out.wav> [gpu|cpu] [seed] [--greedy]
 

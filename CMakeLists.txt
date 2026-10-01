@@ -23,6 +23,7 @@ add_library(speechcommon
     common/backend.cpp
     common/wav.cpp
     common/args.cpp
+    common/language.cpp
 )
 target_include_directories(speechcommon PUBLIC common)
 target_link_libraries(speechcommon PUBLIC ggml)

@@ -25,6 +25,11 @@ from safetensors import safe_open
 ARCH_TALKER = "qwen3tts-talker"
 ARCH_CODEC = "qwen3tts-codec"
 
+# The BCP 47 tag of each language the checkpoint names. Its dialects have none: a dialect is spoken only by
+# its speakers, when the language is Chinese or left to the model.
+LANGUAGE_TAGS = {"chinese": "zh", "english": "en", "french": "fr", "german": "de", "italian": "it",
+                 "japanese": "ja", "korean": "ko", "portuguese": "pt", "russian": "ru", "spanish": "es"}
+
 parser = argparse.ArgumentParser()
 parser.add_argument("model_dir")
 parser.add_argument("out_dir")
@@ -85,8 +90,16 @@ w.add_array("talker.speaker_names", [name for name, _ in speakers])
 w.add_array("talker.speaker_ids", [int(i) for _, i in speakers])
 w.add_array("talker.speaker_dialects", [talker_cfg["spk_is_dialect"][name] or "" for name, _ in speakers])
 languages = sorted(talker_cfg["codec_language_id"].items(), key=lambda kv: kv[0])
+dialects = {d for d in talker_cfg["spk_is_dialect"].values() if d}
+unknown = [name for name, _ in languages if name not in LANGUAGE_TAGS and name not in dialects]
+assert not unknown, f"no BCP 47 tag for the languages {unknown}"
 w.add_array("talker.language_names", [name for name, _ in languages])
 w.add_array("talker.language_ids", [int(i) for _, i in languages])
+w.add_array("talker.language_tags", [LANGUAGE_TAGS.get(name, "") for name, _ in languages])
+tags = sorted(LANGUAGE_TAGS[name] for name, _ in languages if name in LANGUAGE_TAGS)
+w.add_languages(tags)
+w.add_array("speech.languages", tags)
+w.add_bool("speech.language_selectable", True)
 
 # The Qwen2 byte-level BPE: tokens in id order, merges in rank order, and the special tokens.
 vocab = json.load(open(os.path.join(args.model_dir, "vocab.json"), encoding="utf-8"))
