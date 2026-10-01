@@ -45,6 +45,8 @@ add_library(irodoritts
     families/irodori-tts/loudness.cpp
     families/irodori-tts/codec.cpp
     families/irodori-tts/reference.cpp
+    families/irodori-tts/speaker-encoder.cpp
+    families/irodori-tts/duration.cpp
 )
 target_include_directories(irodoritts PUBLIC families/irodori-tts)
 target_link_libraries(irodoritts PUBLIC speechcommon)
@@ -72,3 +74,6 @@ target_link_libraries(irodori-text-check PRIVATE irodoritts)
 
 add_executable(irodori-codec-check tools/irodori-codec-check.cpp)
 target_link_libraries(irodori-codec-check PRIVATE irodoritts)
+
+add_executable(irodori-condition-check tools/irodori-condition-check.cpp)
+target_link_libraries(irodori-condition-check PRIVATE irodoritts)
