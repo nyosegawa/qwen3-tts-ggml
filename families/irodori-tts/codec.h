@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,6 +9,9 @@
 #include "ggml-backend.h"
 #include "graph.h"
 #include "model-file.h"
+
+/** Called with each piece of audio as it is decoded; returning false stops the decoding. */
+using AudioSink = std::function<bool(const float * samples, size_t n)>;
 
 /**
  * Semantic-DACVAE-Japanese-32dim, the codec of Irodori-TTS: 48 kHz audio and a 32-dimensional latent at
@@ -35,13 +39,29 @@ public:
     /** The encoder's output [latent_dim, samples / hop] for `samples` that are a whole number of frames. */
     ggml_tensor * build_encoder(Graph & g, const std::vector<float> & samples) const;
 
+    /**
+     * The audio [1, frames * hop] of a latent, row-major [frames, latent_dim], of at least two frames.
+     * `stages`, when given, receives the output of the input projection, of the first convolution and of
+     * each upsampling block.
+     */
+    ggml_tensor * build_decoder(Graph & g, const std::vector<float> & latent, std::vector<ggml_tensor *> * stages = nullptr) const;
+
+    /**
+     * Decodes the first `samples` samples of a latent, row-major [frames, latent_dim], `first_window`
+     * frames first and then `window` at a time, each with enough frames around it that its samples are
+     * those of decoding the whole latent at once, and passes each window's samples to `sink`.
+     */
+    void decode(const std::vector<float> & latent, int64_t samples, int first_window, int window, const AudioSink & sink);
+
     /** The frames on each side of a window that the encoder's receptive field reaches. */
     static constexpr int kEncoderMargin = 8;
+    /** The same for the decoder, whose receptive field reaches about 7.7 frames. */
+    static constexpr int kDecoderMargin = 10;
 
 private:
     ggml_backend_t backend_;
     std::unique_ptr<ModelFile> model_;
     ggml_gallocr_t allocr_ = nullptr;
     int sample_rate_ = 0, hop_ = 0, latent_dim_ = 0;
-    std::vector<int32_t> encoder_rates_;
+    std::vector<int32_t> encoder_rates_, decoder_rates_;
 };
