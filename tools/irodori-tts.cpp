@@ -13,7 +13,7 @@
 
 #include "args.h"
 #include "backend.h"
-#include "synthesizer.h"
+#include "irodori-tts/synthesizer.h"
 #include "wav.h"
 
 using namespace irodori;

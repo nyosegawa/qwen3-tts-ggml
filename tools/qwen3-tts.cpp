@@ -9,7 +9,7 @@
 
 #include "args.h"
 #include "backend.h"
-#include "synthesizer.h"
+#include "qwen3-tts/synthesizer.h"
 #include "wav.h"
 
 namespace {

@@ -14,8 +14,8 @@
 #include "backend.h"
 #include "compare.h"
 #include "flat-json.h"
+#include "irodori-tts/synthesizer.h"
 #include "npy.h"
-#include "synthesizer.h"
 
 using namespace irodori;
 

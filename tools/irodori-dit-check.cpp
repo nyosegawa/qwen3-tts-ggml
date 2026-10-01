@@ -14,8 +14,8 @@
 
 #include "backend.h"
 #include "compare.h"
+#include "irodori-tts/sampler.h"
 #include "npy.h"
-#include "sampler.h"
 
 using namespace irodori;
 

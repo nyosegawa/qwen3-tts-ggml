@@ -3,6 +3,17 @@
 #include <cstdio>
 #include <stdexcept>
 
+std::string gguf_architecture(const std::string & path) {
+    gguf_init_params params = {/*no_alloc =*/true, /*ctx =*/nullptr};
+    gguf_context * gguf = gguf_init_from_file(path.c_str(), params);
+    if (!gguf) throw std::runtime_error("cannot read GGUF: " + path);
+    const int64_t id = gguf_find_key(gguf, "general.architecture");
+    const std::string arch = id >= 0 && gguf_get_kv_type(gguf, id) == GGUF_TYPE_STRING ? gguf_get_val_str(gguf, id) : "";
+    gguf_free(gguf);
+    if (arch.empty()) throw std::runtime_error(path + " names no general.architecture");
+    return arch;
+}
+
 ModelFile::ModelFile(const std::string & path, ggml_backend_t backend) : path_(path) {
     gguf_init_params params = {/*no_alloc =*/true, /*ctx =*/&ctx_};
     gguf_ = gguf_init_from_file(path.c_str(), params);

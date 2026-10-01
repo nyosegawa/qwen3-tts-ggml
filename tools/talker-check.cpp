@@ -15,9 +15,9 @@
 
 #include "backend.h"
 #include "npy.h"
-#include "prompt.h"
-#include "sampler.h"
-#include "talker.h"
+#include "qwen3-tts/prompt.h"
+#include "qwen3-tts/sampler.h"
+#include "qwen3-tts/talker.h"
 
 namespace {
 

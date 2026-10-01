@@ -14,9 +14,9 @@
 
 #include "backend.h"
 #include "compare.h"
-#include "duration.h"
+#include "irodori-tts/duration.h"
+#include "irodori-tts/speaker-encoder.h"
 #include "npy.h"
-#include "speaker-encoder.h"
 
 using namespace irodori;
 

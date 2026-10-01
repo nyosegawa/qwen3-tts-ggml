@@ -42,6 +42,8 @@ public:
                    SynthesisStats * stats = nullptr);
 
     int sample_rate() const { return codec_.sample_rate(); }
+    /** The talker's general.name, such as Qwen3-TTS-12Hz-1.7B-CustomVoice. */
+    std::string talker_name() const { return talker_.model().str("general.name"); }
     const PromptIds & ids() const { return ids_; }
 
 private:

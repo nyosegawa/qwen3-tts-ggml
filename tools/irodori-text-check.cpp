@@ -13,10 +13,10 @@
 
 #include "backend.h"
 #include "compare.h"
+#include "irodori-tts/text-encoder.h"
+#include "irodori-tts/text-normalizer.h"
+#include "irodori-tts/tokenizer.h"
 #include "npy.h"
-#include "text-encoder.h"
-#include "text-normalizer.h"
-#include "tokenizer.h"
 
 using namespace irodori;
 
