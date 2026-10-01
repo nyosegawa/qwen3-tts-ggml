@@ -22,7 +22,9 @@ public:
 
     uint32_t u32(const std::string & key) const;
     float f32(const std::string & key) const;
+    std::string str(const std::string & key) const;
     std::vector<int32_t> i32_array(const std::string & key) const;
+    std::vector<double> f64_array(const std::string & key) const;
     std::vector<std::string> str_array(const std::string & key) const;
 
     const std::string & path() const { return path_; }
