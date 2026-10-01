@@ -6,9 +6,9 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
-#include <fstream>
 
 #include "backend.h"
+#include "wav.h"
 #include "codec.h"
 #include "npy.h"
 
@@ -31,20 +31,6 @@ Diff compare(const std::vector<float> & got, const std::vector<float> & want) {
     }
     d.snr_db = noise == 0 ? INFINITY : 10 * std::log10(signal / noise);
     return d;
-}
-
-void write_wav(const std::string & path, const std::vector<float> & pcm, int rate) {
-    std::ofstream f(path, std::ios::binary);
-    const uint32_t data_size = (uint32_t) pcm.size() * 2;
-    auto u32 = [&](uint32_t v) { f.write((const char *) &v, 4); };
-    auto u16 = [&](uint16_t v) { f.write((const char *) &v, 2); };
-    f.write("RIFF", 4); u32(36 + data_size); f.write("WAVEfmt ", 8);
-    u32(16); u16(1); u16(1); u32(rate); u32(rate * 2); u16(2); u16(16);
-    f.write("data", 4); u32(data_size);
-    for (float s : pcm) {
-        const int16_t v = (int16_t) std::lround(std::max(-1.0f, std::min(1.0f, s)) * 32767.0f);
-        f.write((const char *) &v, 2);
-    }
 }
 
 double seconds_since(std::chrono::steady_clock::time_point t0) {

@@ -44,32 +44,32 @@ ggml_tensor * TextEncoder::build(Graph & g, const std::vector<int32_t> & ids, st
         const std::string b = "text.blk." + std::to_string(l) + ".";
         const bool global = global_.at(l) != 0;
         ggml_tensor * h = l == 0 ? x : layer_norm(x, b + "attn_norm");
-        ggml_tensor * q = ggml_reshape_3d(ctx, ggml_mul_mat(ctx, m_.tensor(b + "attn_q"), h), head_dim, heads_, n);
-        ggml_tensor * k = ggml_reshape_3d(ctx, ggml_mul_mat(ctx, m_.tensor(b + "attn_k"), h), head_dim, heads_, n);
-        ggml_tensor * v = ggml_reshape_3d(ctx, ggml_mul_mat(ctx, m_.tensor(b + "attn_v"), h), head_dim, heads_, n);
+        ggml_tensor * q = ggml_reshape_3d(ctx, mul_mat(ctx, m_.tensor(b + "attn_q"), h), head_dim, heads_, n);
+        ggml_tensor * k = ggml_reshape_3d(ctx, mul_mat(ctx, m_.tensor(b + "attn_k"), h), head_dim, heads_, n);
+        ggml_tensor * v = ggml_reshape_3d(ctx, mul_mat(ctx, m_.tensor(b + "attn_v"), h), head_dim, heads_, n);
         const float theta = global ? theta_global_ : theta_local_;
         q = ggml_rope_ext(ctx, q, pos, nullptr, head_dim, GGML_ROPE_TYPE_NEOX, 0, theta, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
         k = ggml_rope_ext(ctx, k, pos, nullptr, head_dim, GGML_ROPE_TYPE_NEOX, 0, theta, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
         ggml_tensor * qh = ggml_cont(ctx, ggml_permute(ctx, q, 0, 2, 1, 3));
         ggml_tensor * kh = ggml_cont(ctx, ggml_permute(ctx, k, 0, 2, 1, 3));
         ggml_tensor * vt = ggml_cont(ctx, ggml_permute(ctx, v, 1, 2, 0, 3));
-        ggml_tensor * kq = ggml_mul_mat(ctx, kh, qh);
+        ggml_tensor * kq = mul_mat(ctx, kh, qh);
         kq = ggml_soft_max_ext(ctx, kq, global ? nullptr : local_mask, 1.0f / std::sqrt((float) head_dim), 0.0f);
-        ggml_tensor * o = ggml_mul_mat(ctx, vt, kq);
+        ggml_tensor * o = mul_mat(ctx, vt, kq);
         o = ggml_reshape_2d(ctx, ggml_cont(ctx, ggml_permute(ctx, o, 0, 2, 1, 3)), hidden_, n);
-        x = ggml_add(ctx, x, ggml_mul_mat(ctx, m_.tensor(b + "attn_out"), o));
+        x = ggml_add(ctx, x, mul_mat(ctx, m_.tensor(b + "attn_out"), o));
 
         h = layer_norm(x, b + "ffn_norm");
-        ggml_tensor * act = ggml_gelu_erf(ctx, ggml_mul_mat(ctx, m_.tensor(b + "ffn_act"), h));
-        h = ggml_mul(ctx, act, ggml_mul_mat(ctx, m_.tensor(b + "ffn_gate"), h));
-        x = ggml_add(ctx, x, ggml_mul_mat(ctx, m_.tensor(b + "ffn_down"), h));
+        ggml_tensor * act = ggml_gelu_erf(ctx, mul_mat(ctx, m_.tensor(b + "ffn_act"), h));
+        h = ggml_mul(ctx, act, mul_mat(ctx, m_.tensor(b + "ffn_gate"), h));
+        x = ggml_add(ctx, x, mul_mat(ctx, m_.tensor(b + "ffn_down"), h));
         if (layers && l + 1 < layers_) layers->push_back(x);
     }
     x = layer_norm(x, "text.final_norm");
     if (layers) layers->push_back(x);
 
     auto linear = [&](ggml_tensor * in, const std::string & name) {
-        return ggml_add(ctx, ggml_mul_mat(ctx, m_.tensor(name + ".weight"), in), m_.tensor(name + ".bias"));
+        return ggml_add(ctx, mul_mat(ctx, m_.tensor(name + ".weight"), in), m_.tensor(name + ".bias"));
     };
     ggml_tensor * p = linear(x, "text.proj");
     ggml_tensor * r = ggml_mul(ctx, ggml_rms_norm(ctx, x, norm_eps_), m_.tensor("text.proj.res_norm"));

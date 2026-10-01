@@ -6,10 +6,10 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <fstream>
 
 #include "backend.h"
 #include "synthesizer.h"
+#include "wav.h"
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -37,20 +37,6 @@ std::vector<std::string> utf8_args(int argc, char ** argv) {
     for (int i = 0; i < argc; i++) args.push_back(argv[i]);
 #endif
     return args;
-}
-
-void write_wav(const std::string & path, const std::vector<float> & pcm, int rate) {
-    std::ofstream f(path, std::ios::binary);
-    const uint32_t data_size = (uint32_t) pcm.size() * 2;
-    auto u32 = [&](uint32_t v) { f.write((const char *) &v, 4); };
-    auto u16 = [&](uint16_t v) { f.write((const char *) &v, 2); };
-    f.write("RIFF", 4); u32(36 + data_size); f.write("WAVEfmt ", 8);
-    u32(16); u16(1); u16(1); u32(rate); u32(rate * 2); u16(2); u16(16);
-    f.write("data", 4); u32(data_size);
-    for (float s : pcm) {
-        const int16_t v = (int16_t) std::lround(std::max(-1.0f, std::min(1.0f, s)) * 32767.0f);
-        f.write((const char *) &v, 2);
-    }
 }
 
 int run(const std::vector<std::string> & a) {

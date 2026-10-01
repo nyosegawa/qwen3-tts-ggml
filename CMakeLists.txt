@@ -21,6 +21,7 @@ endif()
 add_library(speechcommon
     common/model-file.cpp
     common/backend.cpp
+    common/wav.cpp
 )
 target_include_directories(speechcommon PUBLIC common)
 target_link_libraries(speechcommon PUBLIC ggml)
@@ -41,6 +42,9 @@ add_library(irodoritts
     families/irodori-tts/text-normalizer.cpp
     families/irodori-tts/tokenizer.cpp
     families/irodori-tts/text-encoder.cpp
+    families/irodori-tts/loudness.cpp
+    families/irodori-tts/codec.cpp
+    families/irodori-tts/reference.cpp
 )
 target_include_directories(irodoritts PUBLIC families/irodori-tts)
 target_link_libraries(irodoritts PUBLIC speechcommon)
@@ -65,3 +69,6 @@ target_link_libraries(qwen3-tts-worker PRIVATE qwen3tts)
 
 add_executable(irodori-text-check tools/irodori-text-check.cpp)
 target_link_libraries(irodori-text-check PRIVATE irodoritts)
+
+add_executable(irodori-codec-check tools/irodori-codec-check.cpp)
+target_link_libraries(irodori-codec-check PRIVATE irodoritts)
