@@ -22,9 +22,13 @@ add_library(speechcommon
     common/model-file.cpp
     common/backend.cpp
     common/wav.cpp
+    common/args.cpp
 )
 target_include_directories(speechcommon PUBLIC common)
 target_link_libraries(speechcommon PUBLIC ggml)
+if (WIN32)
+    target_link_libraries(speechcommon PUBLIC shell32)
+endif()
 
 add_library(qwen3tts
     families/qwen3-tts/codec.cpp
@@ -49,6 +53,7 @@ add_library(irodoritts
     families/irodori-tts/duration.cpp
     families/irodori-tts/dit.cpp
     families/irodori-tts/sampler.cpp
+    families/irodori-tts/synthesizer.cpp
 )
 target_include_directories(irodoritts PUBLIC families/irodori-tts)
 target_link_libraries(irodoritts PUBLIC speechcommon)
@@ -64,9 +69,6 @@ target_link_libraries(tokenizer-check PRIVATE qwen3tts)
 
 add_executable(qwen3-tts tools/qwen3-tts.cpp)
 target_link_libraries(qwen3-tts PRIVATE qwen3tts)
-if (WIN32)
-    target_link_libraries(qwen3-tts PRIVATE shell32)
-endif()
 
 add_executable(qwen3-tts-worker tools/qwen3-tts-worker.cpp)
 target_link_libraries(qwen3-tts-worker PRIVATE qwen3tts)
@@ -82,3 +84,9 @@ target_link_libraries(irodori-condition-check PRIVATE irodoritts)
 
 add_executable(irodori-dit-check tools/irodori-dit-check.cpp)
 target_link_libraries(irodori-dit-check PRIVATE irodoritts)
+
+add_executable(irodori-tts tools/irodori-tts.cpp)
+target_link_libraries(irodori-tts PRIVATE irodoritts)
+
+add_executable(irodori-synthesis-check tools/irodori-synthesis-check.cpp)
+target_link_libraries(irodori-synthesis-check PRIVATE irodoritts)

@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <utility>
 
+namespace irodori {
+
 namespace {
 
 struct Decomposition {
@@ -248,3 +250,5 @@ std::string normalize_text(const std::string & raw) {
     while (end > begin && is_whitespace(text[end - 1])) end--;
     return encode_utf8(std::vector<uint32_t>(text.begin() + begin, text.begin() + end));
 }
+
+}  // namespace irodori

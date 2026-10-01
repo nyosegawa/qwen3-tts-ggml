@@ -17,6 +17,8 @@
 #include "npy.h"
 #include "sampler.h"
 
+using namespace irodori;
+
 namespace {
 
 /** The dump's model repository, from its meta.json. */

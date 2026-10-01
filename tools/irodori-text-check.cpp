@@ -18,6 +18,8 @@
 #include "text-normalizer.h"
 #include "tokenizer.h"
 
+using namespace irodori;
+
 namespace {
 
 std::string from_hex(const std::string & hex) {

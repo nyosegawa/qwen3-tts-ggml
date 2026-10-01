@@ -5,6 +5,8 @@
 
 #include "codec.h"
 
+namespace irodori {
+
 /** The loudness the official runtime gives a reference before encoding it, in LUFS. */
 constexpr double kReferenceLufs = -16.0;
 
@@ -14,3 +16,5 @@ constexpr double kReferenceLufs = -16.0;
  * sample rate and at most `max_seconds` long; the runtime would resample or cut it, and this throws.
  */
 std::vector<float> encode_reference(Codec & codec, const std::string & wav_path, double max_seconds);
+
+}  // namespace irodori

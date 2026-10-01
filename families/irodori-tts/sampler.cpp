@@ -3,6 +3,8 @@
 #include <cmath>
 #include <random>
 
+namespace irodori {
+
 namespace {
 
 /**
@@ -85,3 +87,5 @@ std::vector<float> gaussian_noise(uint64_t seed, size_t n) {
     }
     return out;
 }
+
+}  // namespace irodori

@@ -5,6 +5,8 @@
 #include "graph.h"
 #include "model-file.h"
 
+namespace irodori {
+
 /**
  * The speaker condition: a pre-norm transformer over the reference latent in patches of four frames, its
  * output normed, with the mean of its positions prepended as a summary the duration predictor reads.
@@ -27,3 +29,5 @@ private:
     int dim_, heads_, layers_, patch_, latent_dim_;
     float eps_, theta_;
 };
+
+}  // namespace irodori

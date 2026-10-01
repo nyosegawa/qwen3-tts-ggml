@@ -7,6 +7,8 @@
 
 #include "model-file.h"
 
+namespace irodori {
+
 /**
  * The SentencePiece Unigram tokenizer of ModernBERT-ja, as Hugging Face tokenizers runs its tokenizer.json:
  * the added tokens are split out of the text first, spaces become "▁", the Viterbi path over the pieces'
@@ -31,3 +33,5 @@ private:
     int32_t bos_ = 0, unknown_ = 0;
     int32_t bytes_[256];
 };
+
+}  // namespace irodori

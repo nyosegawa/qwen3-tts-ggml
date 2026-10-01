@@ -5,6 +5,8 @@
 
 #include "layers.h"
 
+namespace irodori {
+
 /*
  * The latent attends to itself, then to the text and the speaker, in one softmax over the concatenated
  * keys. Each head's query and key get their own RMSNorm; RoPE (neighbouring pairs, as the official complex
@@ -126,3 +128,5 @@ ggml_tensor * Dit::build(Graph & g, const std::vector<float> & x_in, int frames,
     }
     return l.linear(l.rms(x, "dit.out_norm"), "dit.out_proj");
 }
+
+}  // namespace irodori

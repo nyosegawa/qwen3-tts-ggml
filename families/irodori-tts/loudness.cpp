@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+namespace irodori {
+
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
@@ -87,3 +89,5 @@ std::vector<float> normalize_loudness(const std::vector<float> & samples, int sa
     }
     return out;
 }
+
+}  // namespace irodori

@@ -6,6 +6,8 @@
 
 #include "layers.h"
 
+namespace irodori {
+
 DurationPredictor::DurationPredictor(const ModelFile & m, int sample_rate, int hop) : m_(m) {
     layers_ = (int) m.u32("irodori.duration.num_layers");
     eps_ = m.f32("irodori.norm_eps");
@@ -37,3 +39,5 @@ int DurationPredictor::frames(float predicted_sum) const {
     const int rounded = (int) std::nearbyint((double) predicted);
     return std::max(min_frames_, std::min(max_frames_, rounded));
 }
+
+}  // namespace irodori
