@@ -86,5 +86,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" \
-            --notes "speech-worker and the other tools for macOS arm64 (Metal) and Windows x64 (Vulkan). The worker runs Qwen3-TTS, whose models are on https://huggingface.co/sakasegawa/qwen3-tts-ggml, and Irodori-TTS v4.1-Small-MF and v4.1-Small, whose models reference/irodori-tts converts (see the README)."
+            --title "$GITHUB_REF_NAME" --generate-notes \
+            --notes "speech-worker and the other tools for macOS arm64 (Metal) and Windows x64 (Vulkan). The README lists the model families the worker runs and where their converted weights are on Hugging Face."
