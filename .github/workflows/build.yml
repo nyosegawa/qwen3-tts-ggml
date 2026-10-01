@@ -35,8 +35,9 @@ jobs:
     env:
       VULKAN_VERSION: 1.4.357.0
       # ggml is built once, installed with static libraries, and restored from the cache while its commit,
-      # the Vulkan SDK, the runner image and these options stay the same: compiling Vulkan's shaders alone
-      # takes over two minutes, which the project's own code does not need repeated.
+      # the Vulkan SDK, Visual Studio and these options stay the same: compiling Vulkan's shaders alone takes
+      # over two minutes, which the project's own code does not need repeated. The key names Visual Studio's
+      # version rather than the runner image's, since consecutive runs land on different image versions.
       CMAKE_OPTIONS: -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
       GGML_OPTIONS: -DGGML_VULKAN=ON -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OFF -DGGML_BUILD_TESTS=OFF -DGGML_BUILD_EXAMPLES=OFF
     steps:
@@ -47,7 +48,8 @@ jobs:
           $commit = (git ls-tree HEAD ggml).Split()[2]
           $bytes = [Text.Encoding]::UTF8.GetBytes("$env:CMAKE_OPTIONS $env:GGML_OPTIONS")
           $options = (Get-FileHash -InputStream ([IO.MemoryStream]::new($bytes)) -Algorithm SHA256).Hash.Substring(0, 12)
-          Add-Content $env:GITHUB_OUTPUT "key=ggml-$commit-vulkan-$env:VULKAN_VERSION-$env:ImageOS-$env:ImageVersion-$options"
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationVersion
+          Add-Content $env:GITHUB_OUTPUT "key=ggml-$commit-vulkan-$env:VULKAN_VERSION-vs$vs-$options"
       - uses: actions/cache@v4
         id: cache
         with:
