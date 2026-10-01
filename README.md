@@ -8,7 +8,7 @@ stage of a port against the official implementation.
 | Family | Model | Task | Converted weights |
 |---|---|---|---|
 | Qwen3-TTS | Qwen3-TTS 12Hz 0.6B and 1.7B CustomVoice | speech synthesis with the named speakers, streamed frame by frame | [sakasegawa/qwen3-tts-ggml](https://huggingface.co/sakasegawa/qwen3-tts-ggml) |
-| Irodori-TTS | Irodori-TTS v4.1-Small-MF and v4.1-Small | Japanese speech synthesis in the voice of a reference recording, a sentence at a time, streamed as the codec decodes it | convert them yourself (below) |
+| Irodori-TTS | Irodori-TTS v4.1-Small-MF and v4.1-Small | Japanese speech synthesis in the voice of a reference recording, a sentence at a time, streamed as the codec decodes it | [sakasegawa/irodori-tts-ggml](https://huggingface.co/sakasegawa/irodori-tts-ggml) |
 
 ## Binaries
 
@@ -197,7 +197,10 @@ generator, so a seed gives other audio than the same seed in the official runtim
 
 ### Models
 
-The converted weights are not published yet. To convert them from the pinned official checkpoints:
+A synthesis needs one model (`irodori-tts-v4.1-small-mf-f16.gguf` or `irodori-tts-v4.1-small-f16.gguf`) and
+the codec (`semantic-dacvae-japanese-32dim-f32.gguf`) from
+[sakasegawa/irodori-tts-ggml](https://huggingface.co/sakasegawa/irodori-tts-ggml), whose card lists their
+SHA-256. To convert them yourself from the pinned official checkpoints:
 
 ```sh
 cd reference/irodori-tts
@@ -269,5 +272,7 @@ whole sampler and the codec's first window, so it grows with the sentence.
 MIT, see [LICENSE](LICENSE). The model weights are their authors': Qwen3-TTS is the Qwen team's, under the
 Apache License 2.0. Irodori-TTS v4.1-Small and v4.1-Small-MF are Aratako's, under the MIT License with the
 ethical restrictions of their model cards (no voice cloning without consent, no deepfakes or
-misinformation). Semantic-DACVAE-Japanese-32dim is MIT on its card; it derives from
-facebook/dacvae-watermarked, whose card says both Apache-2.0 and the SAM License.
+misinformation). Semantic-DACVAE-Japanese-32dim is Aratako's and MIT on its card; it derives from Meta's
+facebook/dacvae-watermarked, which is under the Apache License 2.0. That card's text also names the SAM
+License, a sentence left from the README of facebookresearch/dacvae, which Meta corrected to Apache-2.0 on
+2025-12-19; the repository's LICENSE has been Apache-2.0 from its first commit.

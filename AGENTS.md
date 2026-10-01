@@ -104,7 +104,8 @@ settled a choice or turned an approach down for good; if so, the record goes int
 - The user merges pull requests, with a squash, once CI passes. An agent merges only when told to.
 - A tag `v*` builds the release in CI. Releases and tags are never deleted or moved: ASIST pins them by
   SHA-256.
-- Converted GGUF files go to Hugging Face only with the user's approval, one repository per original
-  model, with its license.
+- Converted GGUF files go to Hugging Face only with the user's approval, one repository per family
+  (sakasegawa/qwen3-tts-ggml, sakasegawa/irodori-tts-ggml), with the licenses of what it holds. A changed
+  file goes up under the same name, and its card's SHA-256 changes with it.
 - When a change alters what a user does or sees (a tool's arguments, the worker protocol, the GGUF
   layout), update README.md in the same change.
