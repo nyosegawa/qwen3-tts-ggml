@@ -34,19 +34,45 @@ jobs:
     runs-on: windows-2025
     env:
       VULKAN_VERSION: 1.4.357.0
+      # ggml is built once, installed with static libraries, and restored from the cache while its commit,
+      # the Vulkan SDK, Visual Studio and these options stay the same: compiling Vulkan's shaders alone takes
+      # over two minutes, which the project's own code does not need repeated. The key names Visual Studio's
+      # version rather than the runner image's, since consecutive runs land on different image versions.
+      CMAKE_OPTIONS: -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+      GGML_OPTIONS: -DGGML_VULKAN=ON -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OFF -DGGML_BUILD_TESTS=OFF -DGGML_BUILD_EXAMPLES=OFF
     steps:
       - uses: actions/checkout@v6
+      - name: Name the ggml build
+        id: ggml
+        run: |
+          $commit = (git ls-tree HEAD ggml).Split()[2]
+          $bytes = [Text.Encoding]::UTF8.GetBytes("$env:CMAKE_OPTIONS $env:GGML_OPTIONS")
+          $options = (Get-FileHash -InputStream ([IO.MemoryStream]::new($bytes)) -Algorithm SHA256).Hash.Substring(0, 12)
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationVersion
+          Add-Content $env:GITHUB_OUTPUT "key=ggml-$commit-vulkan-$env:VULKAN_VERSION-vs$vs-$options"
+      - uses: actions/cache@v4
+        id: cache
         with:
-          submodules: recursive
+          path: ggml-install
+          key: ${{ steps.ggml.outputs.key }}
       - name: Install the Vulkan SDK
         run: |
           curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/${env:VULKAN_VERSION}/windows/vulkansdk-windows-X64-${env:VULKAN_VERSION}.exe"
           & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
           Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\${env:VULKAN_VERSION}"
           Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
+      - name: Build ggml
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          git submodule update --init --depth 1 ggml
+          $options = "$env:CMAKE_OPTIONS $env:GGML_OPTIONS" -split ' '
+          cmake -S ggml -B ggml-build @options "-DCMAKE_INSTALL_PREFIX=$PWD/ggml-install"
+          cmake --build ggml-build --config Release -j 4
+          cmake --install ggml-build --config Release
       - name: Build
         run: |
-          cmake -B build -A x64 -DGGML_VULKAN=ON -DGGML_NATIVE=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          $options = $env:CMAKE_OPTIONS -split ' '
+          cmake -B build @options -DSPEECH_INSTALLED_GGML=ON "-DCMAKE_PREFIX_PATH=$PWD/ggml-install"
           cmake --build build --config Release -j 4
       - uses: actions/upload-artifact@v4
         with:
