@@ -22,11 +22,13 @@ jobs:
         with:
           name: qwen3-tts-macos-arm64-metal
           path: |
+            build/speech-worker
             build/qwen3-tts
-            build/qwen3-tts-worker
+            build/irodori-tts
             build/codec-check
             build/talker-check
             build/tokenizer-check
+            build/irodori-*-check
 
   windows-vulkan:
     runs-on: windows-2025
@@ -50,11 +52,13 @@ jobs:
         with:
           name: qwen3-tts-windows-x64-vulkan
           path: |
+            build/Release/speech-worker.exe
             build/Release/qwen3-tts.exe
-            build/Release/qwen3-tts-worker.exe
+            build/Release/irodori-tts.exe
             build/Release/codec-check.exe
             build/Release/talker-check.exe
             build/Release/tokenizer-check.exe
+            build/Release/irodori-*-check.exe
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

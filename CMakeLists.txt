@@ -38,7 +38,8 @@ add_library(qwen3tts
     families/qwen3-tts/tokenizer.cpp
     families/qwen3-tts/synthesizer.cpp
 )
-target_include_directories(qwen3tts PUBLIC families/qwen3-tts)
+# Tools name the family in their includes ("qwen3-tts/codec.h"), since both families have a codec.h.
+target_include_directories(qwen3tts PUBLIC families)
 target_link_libraries(qwen3tts PUBLIC speechcommon)
 
 add_library(irodoritts
@@ -55,7 +56,7 @@ add_library(irodoritts
     families/irodori-tts/sampler.cpp
     families/irodori-tts/synthesizer.cpp
 )
-target_include_directories(irodoritts PUBLIC families/irodori-tts)
+target_include_directories(irodoritts PUBLIC families)
 target_link_libraries(irodoritts PUBLIC speechcommon)
 
 add_executable(codec-check tools/codec-check.cpp)
@@ -70,8 +71,13 @@ target_link_libraries(tokenizer-check PRIVATE qwen3tts)
 add_executable(qwen3-tts tools/qwen3-tts.cpp)
 target_link_libraries(qwen3-tts PRIVATE qwen3tts)
 
-add_executable(qwen3-tts-worker tools/qwen3-tts-worker.cpp)
-target_link_libraries(qwen3-tts-worker PRIVATE qwen3tts)
+add_executable(speech-worker
+    tools/speech-worker.cpp
+    tools/worker/qwen3-tts-engine.cpp
+    tools/worker/irodori-tts-engine.cpp
+)
+target_include_directories(speech-worker PRIVATE tools)
+target_link_libraries(speech-worker PRIVATE qwen3tts irodoritts)
 
 add_executable(irodori-text-check tools/irodori-text-check.cpp)
 target_link_libraries(irodori-text-check PRIVATE irodoritts)

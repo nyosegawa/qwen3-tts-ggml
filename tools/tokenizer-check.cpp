@@ -7,7 +7,7 @@
 #include <sstream>
 
 #include "backend.h"
-#include "tokenizer.h"
+#include "qwen3-tts/tokenizer.h"
 
 int main(int argc, char ** argv) {
     if (argc < 3) {

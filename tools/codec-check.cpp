@@ -8,9 +8,9 @@
 #include <cstdio>
 
 #include "backend.h"
-#include "wav.h"
-#include "codec.h"
 #include "npy.h"
+#include "qwen3-tts/codec.h"
+#include "wav.h"
 
 namespace {
 

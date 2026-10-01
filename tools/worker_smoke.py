@@ -1,7 +1,8 @@
-"""Drives qwen3-tts-worker the way ASIST's main process does: waits for ready, sends two requests, cancels
-the second after its first chunk, sends a third, and checks each answer. Writes the first answer to a WAV.
+"""Drives speech-worker the way ASIST's main process does: waits for ready, sends two requests in its first
+voice, cancels the second after its first chunk, sends a third, and checks each answer. Writes the first
+answer to a WAV.
 
-usage: python3 tools/worker_smoke.py <worker> <talker.gguf> <codec.gguf> <out.wav> [extra worker args...]
+usage: python3 tools/worker_smoke.py <out.wav> <worker> <model.gguf> <codec.gguf> [worker options...]
 """
 
 import base64
@@ -11,9 +12,8 @@ import sys
 import time
 import wave
 
-worker, talker, codec, out_wav = sys.argv[1:5]
-proc = subprocess.Popen([worker, talker, codec, *sys.argv[5:]], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                        stderr=subprocess.DEVNULL)
+out_wav, *command = sys.argv[1:]
+proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 t0 = time.perf_counter()
 
 
@@ -36,12 +36,14 @@ def send(obj):
 
 ready = read()
 assert ready["type"] == "ready", ready
-print(f"ready in {time.perf_counter() - t0:.2f} s: rate {ready['sampleRate']}, {len(ready['voices'])} voices, "
-      f"{len(ready['languages'])} languages, backend {ready.get('backend')}")
+voice = ready["voices"][0]
+print(f"ready in {time.perf_counter() - t0:.2f} s: {ready['model']} ({ready['architecture']}), rate {ready['sampleRate']}, "
+      f"streaming by {ready['streaming']}, {len(ready['voices'])} voices, languages {ready['languages']}, "
+      f"backend {ready.get('backend')}")
 
 t1 = time.perf_counter()
-send({"id": "a", "text": "明日の東京は晴れで、最高気温は二十四度の予報です。", "voice": "ono_anna", "language": "japanese", "speed": 1.0})
-send({"id": "b", "text": "これは途中で止める長めの文です。止まったら終わりの知らせは来ません。", "voice": "ryan", "language": "japanese"})
+send({"id": "a", "text": "明日の東京は晴れで、最高気温は二十四度の予報です。", "voice": voice, "speed": 1.0})
+send({"id": "b", "text": "これは途中で止める長めの文です。止まったら終わりの知らせは来ません。", "voice": voice})
 pcm_a, first_a, cancelled_b, seq_b = bytearray(), None, False, []
 while True:
     m = read()
@@ -56,7 +58,7 @@ while True:
         seq_b.append(m["seq"])
         if not cancelled_b:
             send({"type": "cancel", "id": "b"})
-            send({"id": "c", "text": "三つ目です。", "voice": "ono_anna", "language": "japanese"})
+            send({"id": "c", "text": "三つ目です。", "voice": voice})
             cancelled_b = True
     elif m["type"] == "end" and m["id"] == "b":
         raise SystemExit("b ended although it was cancelled")
@@ -65,6 +67,11 @@ while True:
         break
     elif m["type"] in ("error", "fatal"):
         raise SystemExit(f"unexpected {m}")
+
+send({"id": "d", "text": "声の名前が違います。", "voice": "no-such-voice"})
+m = read()
+assert m["type"] == "error" and m["id"] == "d", m
+print(f"d: error as expected: {m['error']}")
 
 proc.stdin.close()
 proc.wait(timeout=30)

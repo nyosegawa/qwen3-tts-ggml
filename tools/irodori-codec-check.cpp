@@ -18,12 +18,12 @@
 #include <string>
 
 #include "backend.h"
-#include "codec.h"
 #include "compare.h"
 #include "ggml-cpu.h"
-#include "loudness.h"
+#include "irodori-tts/codec.h"
+#include "irodori-tts/loudness.h"
+#include "irodori-tts/reference.h"
 #include "npy.h"
-#include "reference.h"
 #include "wav.h"
 
 using namespace irodori;

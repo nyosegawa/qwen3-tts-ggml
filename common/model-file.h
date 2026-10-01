@@ -7,6 +7,9 @@
 #include "ggml.h"
 #include "gguf.h"
 
+/** The general.architecture of a GGUF file, read without loading its tensors. */
+std::string gguf_architecture(const std::string & path);
+
 /** A GGUF file whose tensors live in one backend buffer, and whose metadata stays readable. */
 class ModelFile {
 public:
