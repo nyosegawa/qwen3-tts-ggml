@@ -12,7 +12,7 @@
 
 namespace {
 
-struct Layers {
+struct Convolutions {
     Graph & g;
     const ModelFile & m;
 
@@ -86,7 +86,7 @@ Codec::~Codec() {
 }
 
 ggml_tensor * Codec::build_encoder(Graph & g, const std::vector<float> & samples) const {
-    Layers l{g, *model_};
+    Convolutions l{g, *model_};
     const int64_t n = (int64_t) samples.size();
     if (n % hop_ != 0) throw std::runtime_error("the encoder takes a whole number of frames");
     ggml_tensor * x = l.conv(g.input(samples, 1, n), "enc.conv_in");
