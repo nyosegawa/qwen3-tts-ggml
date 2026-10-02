@@ -77,7 +77,7 @@ The messages, one JSON object per line:
 | out | `{"type":"end","id":"1","samples":278400}` |
 | out | `{"type":"error","id":"1","error":"..."}` when a request cannot be spoken |
 | out | `{"type":"fatal","error":"..."}` when the worker cannot start |
-| in | `{"type":"cancel","id":"1"}`: the request stops between two chunks and sends no `end`; a request cancelled before it starts is dropped |
+| in | `{"type":"cancel","id":"1"}`: the request stops between two chunks (Irodori-TTS also between two of its sampler's steps, before the first chunk) and sends no `end`; a request cancelled before it starts is dropped |
 
 Requests are served one at a time in arrival order. `speed` is accepted and has no effect.
 

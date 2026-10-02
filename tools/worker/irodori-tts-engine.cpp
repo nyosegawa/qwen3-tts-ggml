@@ -38,7 +38,7 @@ public:
                std::to_string(steps_ > 0 ? steps_ : (int) synth_.model().u32("irodori.default_steps"));
     }
 
-    void speak(const FlatJson & request, uint64_t seed, const PcmSink & sink) override {
+    void speak(const FlatJson & request, uint64_t seed, const PcmSink & sink, const Cancelled & cancelled) override {
         const auto voice = voices_.find(value(request, "voice"));
         if (voice == voices_.end()) throw std::runtime_error("no voice is named \"" + value(request, "voice") + "\"");
         // The model is not told a language; a request may still name one, which must be one it speaks.
@@ -52,7 +52,12 @@ public:
         r.text = value(request, "text");
         r.seed = seed;
         r.steps = steps_;
-        synth_.synthesize(r, voice->second, sink);
+        r.cancelled = cancelled;
+        synth_.synthesize(r, voice->second, [&](const float * s, size_t n) {
+            if (cancelled()) return false;
+            sink(s, n);
+            return true;
+        });
     }
 
 private:

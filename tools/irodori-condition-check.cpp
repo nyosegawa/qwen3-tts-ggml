@@ -12,6 +12,7 @@
 #include <fstream>
 #include <string>
 
+#include "args.h"
 #include "backend.h"
 #include "compare.h"
 #include "irodori-tts/duration.h"
@@ -27,37 +28,38 @@ int meta_int(const std::filesystem::path & dir, const std::string & key) {
     std::ifstream f(dir / "meta.json");
     const std::string json((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     const size_t at = json.find("\"" + key + "\"");
-    if (at == std::string::npos) throw std::runtime_error(key + " is missing from " + (dir / "meta.json").string());
+    if (at == std::string::npos) throw std::runtime_error(key + " is missing from " + (dir / "meta.json").u8string());
     return std::stoi(json.substr(json.find(':', at) + 1));
 }
 
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <model.gguf> <reference out dir> [gpu|cpu|device name]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 3) {
+        std::fprintf(stderr, "usage: %s <model.gguf> <reference out dir> [gpu|cpu|device name]\n", args[0].c_str());
         return 2;
     }
     try {
-        ggml_backend_t backend = init_backend(argc > 3 ? argv[3] : "");
+        ggml_backend_t backend = init_backend(args.size() > 3 ? args[3] : "");
         std::printf("backend: %s\n", ggml_backend_name(backend));
-        ModelFile model(argv[1], backend);
+        ModelFile model(args[1], backend);
         const SpeakerEncoder speaker(model);
         // The codec of every Irodori-TTS checkpoint: 48 kHz audio, 1920 samples a frame.
         const DurationPredictor duration(model, 48000, 1920);
         ggml_gallocr_t allocr = ggml_gallocr_new(ggml_backend_get_default_buffer_type(backend));
 
         std::vector<std::filesystem::path> dumps;
-        for (const auto & e : std::filesystem::directory_iterator(argv[2])) {
+        for (const auto & e : std::filesystem::directory_iterator(std::filesystem::u8path(args[2]))) {
             if (std::filesystem::exists(e.path() / "speaker_state.npy")) dumps.push_back(e.path());
         }
         std::sort(dumps.begin(), dumps.end());
         bool ok = !dumps.empty();
         for (const auto & d : dumps) {
-            std::printf("%s\n", d.filename().string().c_str());
-            const Npy latent = read_npy((d / "ref_latent.npy").string());
-            const Npy encoded_ref = read_npy((d / "speaker_encoded.npy").string());
-            const Npy state_ref = read_npy((d / "speaker_state.npy").string());
+            std::printf("%s\n", d.filename().u8string().c_str());
+            const Npy latent = read_npy((d / "ref_latent.npy").u8string());
+            const Npy encoded_ref = read_npy((d / "speaker_encoded.npy").u8string());
+            const Npy state_ref = read_npy((d / "speaker_state.npy").u8string());
             {
                 Graph g;
                 ggml_tensor * encoded = nullptr;
@@ -72,8 +74,8 @@ int main(int argc, char ** argv) {
                 // and 25 dB with Q8_0. A wrong operation falls far below this bound.
                 ok = ok && ds.snr_db > 20;
             }
-            const Npy text = read_npy((d / "text_state.npy").string());
-            const Npy log_frames = read_npy((d / "duration_log_frames.npy").string());
+            const Npy text = read_npy((d / "text_state.npy").u8string());
+            const Npy log_frames = read_npy((d / "duration_log_frames.npy").u8string());
             Graph g;
             ggml_tensor * text_state = g.input(text.f32, text.shape[1], text.shape[0]);
             const std::vector<float> summary(state_ref.f32.begin(), state_ref.f32.begin() + state_ref.shape[1]);

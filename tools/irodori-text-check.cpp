@@ -11,6 +11,7 @@
 #include <fstream>
 #include <string>
 
+#include "args.h"
 #include "backend.h"
 #include "compare.h"
 #include "irodori-tts/text-encoder.h"
@@ -30,7 +31,7 @@ std::string from_hex(const std::string & hex) {
 
 /** The text cases that fail the normalization or the tokenizer, of all the cases in `path`. */
 int check_cases(const Tokenizer & tokenizer, const std::string & path, int & total) {
-    std::ifstream f(path);
+    std::ifstream f(std::filesystem::u8path(path));
     if (!f) throw std::runtime_error("cannot open " + path);
     std::string line;
     int failed = 0;
@@ -63,20 +64,21 @@ int check_cases(const Tokenizer & tokenizer, const std::string & path, int & tot
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <model.gguf> <reference out dir> [gpu|cpu|device name]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 3) {
+        std::fprintf(stderr, "usage: %s <model.gguf> <reference out dir> [gpu|cpu|device name]\n", args[0].c_str());
         return 2;
     }
     try {
-        ggml_backend_t backend = init_backend(argc > 3 ? argv[3] : "");
+        ggml_backend_t backend = init_backend(args.size() > 3 ? args[3] : "");
         std::printf("backend: %s\n", ggml_backend_name(backend));
-        ModelFile model(argv[1], backend);
+        ModelFile model(args[1], backend);
         const Tokenizer tokenizer(model);
         const TextEncoder encoder(model);
-        const std::filesystem::path dir = argv[2];
+        const std::filesystem::path dir = std::filesystem::u8path(args[2]);
 
         int total = 0;
-        const int failed = check_cases(tokenizer, (dir / "text" / "text-cases.tsv").string(), total);
+        const int failed = check_cases(tokenizer, (dir / "text" / "text-cases.tsv").u8string(), total);
         std::printf("normalization and tokenizer: %d of %d cases match\n", total - failed, total);
         bool ok = failed == 0;
 
@@ -88,9 +90,9 @@ int main(int argc, char ** argv) {
         std::sort(dumps.begin(), dumps.end());
         double worst = INFINITY;
         for (const auto & d : dumps) {
-            const Npy ids = read_npy((d / "input_ids.npy").string());
-            const Npy layers = read_npy((d / "text_layers.npy").string());
-            const Npy state = read_npy((d / "text_state.npy").string());
+            const Npy ids = read_npy((d / "input_ids.npy").u8string());
+            const Npy layers = read_npy((d / "text_layers.npy").u8string());
+            const Npy state = read_npy((d / "text_state.npy").u8string());
             Graph g;
             std::vector<ggml_tensor *> hidden;
             ggml_tensor * out = encoder.build(g, ids.i32, &hidden);
@@ -108,7 +110,7 @@ int main(int argc, char ** argv) {
                 }
             }
             const Diff ds = compare(Graph::read(out), state.f32);
-            std::printf("%s (%zu tokens)\n", d.filename().string().c_str(), n);
+            std::printf("%s (%zu tokens)\n", d.filename().u8string().c_str(), n);
             print_diff("  worst ModernBERT layer " + std::to_string(worst_index), worst_layer);
             print_diff("  text condition", ds);
             worst = std::min(worst, ds.snr_db);

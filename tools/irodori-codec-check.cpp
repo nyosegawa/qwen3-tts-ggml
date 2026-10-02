@@ -13,10 +13,12 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
 
+#include "args.h"
 #include "backend.h"
 #include "compare.h"
 #include "ggml-cpu.h"
@@ -35,7 +37,7 @@ double seconds_since(std::chrono::steady_clock::time_point t0) {
 }
 
 int meta_int(const std::string & dir, const std::string & key) {
-    std::ifstream f(dir + "/meta.json");
+    std::ifstream f(std::filesystem::u8path(dir + "/meta.json"));
     const std::string json((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     const size_t at = json.find("\"" + key + "\"");
     if (at == std::string::npos) throw std::runtime_error(key + " is missing from " + dir + "/meta.json");
@@ -192,18 +194,19 @@ bool check_decoder(Codec & codec, ggml_backend_t backend, const std::string & co
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 4) {
-        std::fprintf(stderr, "usage: %s <codec.gguf> <dump dir> <reference.wav> [gpu|cpu|device name]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 4) {
+        std::fprintf(stderr, "usage: %s <codec.gguf> <dump dir> <reference.wav> [gpu|cpu|device name]\n", args[0].c_str());
         return 2;
     }
     try {
-        ggml_backend_t backend = init_backend(argc > 4 ? argv[4] : "");
+        ggml_backend_t backend = init_backend(args.size() > 4 ? args[4] : "");
         std::printf("backend: %s\n", ggml_backend_name(backend));
         bool ok;
         {
-            Codec codec(argv[1], backend);
-            ok = check_encoder(codec, argv[2], argv[3]);
-            ok = check_decoder(codec, backend, argv[1], argv[2]) && ok;
+            Codec codec(args[1], backend);
+            ok = check_encoder(codec, args[2], args[3]);
+            ok = check_decoder(codec, backend, args[1], args[2]) && ok;
         }
         ggml_backend_free(backend);
         return ok ? 0 : 1;

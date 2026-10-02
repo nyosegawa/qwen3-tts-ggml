@@ -37,14 +37,19 @@ public:
                ",\"languages\":" + json_array(languages_) + ",\"languageSelectable\":true";
     }
 
-    void speak(const FlatJson & request, uint64_t seed, const PcmSink & sink) override {
+    void speak(const FlatJson & request, uint64_t seed, const PcmSink & sink, const Cancelled & cancelled) override {
         SynthesisRequest r;
         r.text = value(request, "text");
         r.speaker = value(request, "voice");
         const std::string language = value(request, "language");
         r.language = language.empty() ? "auto" : language;
         r.seed = seed;
-        synth_.synthesize(r, sink);
+        // Qwen3-TTS passes audio after its first frame and then every four frames, so it stops at the sink.
+        synth_.synthesize(r, [&](const float * s, size_t n) {
+            if (cancelled()) return false;
+            sink(s, n);
+            return true;
+        });
     }
 
 private:

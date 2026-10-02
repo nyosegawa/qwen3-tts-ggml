@@ -11,6 +11,7 @@
 #include <fstream>
 #include <string>
 
+#include "args.h"
 #include "backend.h"
 #include "compare.h"
 #include "flat-json.h"
@@ -26,7 +27,7 @@ std::string meta_string(const std::filesystem::path & dir, const std::string & k
     std::ifstream f(dir / "meta.json");
     const std::string json((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     size_t at = json.find("\"" + key + "\"", outer.empty() ? 0 : json.find("\"" + outer + "\""));
-    if (at == std::string::npos) throw std::runtime_error(key + " is missing from " + (dir / "meta.json").string());
+    if (at == std::string::npos) throw std::runtime_error(key + " is missing from " + (dir / "meta.json").u8string());
     at = json.find('"', json.find(':', at) + 1);
     return flat_json::parse_string(json, at);
 }
@@ -34,17 +35,18 @@ std::string meta_string(const std::filesystem::path & dir, const std::string & k
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 4) {
-        std::fprintf(stderr, "usage: %s <model.gguf> <codec.gguf> <reference out dir> [gpu|cpu|device name]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 4) {
+        std::fprintf(stderr, "usage: %s <model.gguf> <codec.gguf> <reference out dir> [gpu|cpu|device name]\n", args[0].c_str());
         return 2;
     }
     try {
-        ggml_backend_t backend = init_backend(argc > 4 ? argv[4] : "");
+        ggml_backend_t backend = init_backend(args.size() > 4 ? args[4] : "");
         std::printf("backend: %s\n", ggml_backend_name(backend));
-        Synthesizer synth(argv[1], argv[2], backend);
+        Synthesizer synth(args[1], args[2], backend);
         const std::string source = synth.model().str("general.source.url");
         std::vector<std::filesystem::path> dumps;
-        for (const auto & e : std::filesystem::directory_iterator(argv[3])) {
+        for (const auto & e : std::filesystem::directory_iterator(std::filesystem::u8path(args[3]))) {
             if (std::filesystem::exists(e.path() / "audio.npy") &&
                 source.find("huggingface.co/" + meta_string(e.path(), "repository", "model") + "/tree/") != std::string::npos) {
                 dumps.push_back(e.path());
@@ -53,11 +55,11 @@ int main(int argc, char ** argv) {
         std::sort(dumps.begin(), dumps.end());
         bool ok = !dumps.empty();
         for (const auto & d : dumps) {
-            const Voice voice = synth.voice_from_latent(read_npy((d / "ref_latent.npy").string()).f32);
-            const Npy official = read_npy((d / "audio.npy").string());
+            const Voice voice = synth.voice_from_latent(read_npy((d / "ref_latent.npy").u8string()).f32);
+            const Npy official = read_npy((d / "audio.npy").u8string());
             Request r;
             r.text = meta_string(d, "text");
-            r.noise = read_npy((d / "noise.npy").string()).f32;
+            r.noise = read_npy((d / "noise.npy").u8string()).f32;
             std::vector<float> audio;
             Stats stats;
             try {
@@ -67,12 +69,12 @@ int main(int argc, char ** argv) {
                 }, &stats);
             } catch (const std::exception & e) {
                 // Q8_0 weights can move the predicted length by a frame, and the dump's noise then does not fit.
-                std::printf("%s: %s\n", d.filename().string().c_str(), e.what());
+                std::printf("%s: %s\n", d.filename().u8string().c_str(), e.what());
                 ok = false;
                 continue;
             }
             const Diff da = compare(audio, official.f32);
-            std::printf("%s: %zu samples (official %zu), %d frames\n", d.filename().string().c_str(), audio.size(), official.f32.size(),
+            std::printf("%s: %zu samples (official %zu), %d frames\n", d.filename().u8string().c_str(), audio.size(), official.f32.size(),
                         stats.frames);
             print_diff("  audio against the official", da);
             std::printf("  first audio %.3f s: text and duration %.3f s, sampling %.3f s, codec %.3f s in all\n", stats.first_audio,

@@ -51,6 +51,9 @@ another one.
   can be extracted, not to meet a line count.
 - On Windows, a tool reads its command line as UTF-8, sets stdin and stdout to binary, and defines
   `NOMINMAX` before `windows.h`.
+- A path is a UTF-8 string from the command line to the file. A C stream opens it with `ggml_fopen()` and a
+  C++ stream through `std::filesystem::u8path()`: `fopen()` and a stream opened on a `std::string` read the
+  path in the ANSI code page on Windows, so a path with any character outside ASCII is not found.
 - Model weights, reference dumps and audio are never committed; `.gitignore` covers `models/`,
   `reference/*/out/`, `*.gguf` and `*.wav`.
 
