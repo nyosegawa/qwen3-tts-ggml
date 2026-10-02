@@ -10,14 +10,6 @@
 
 namespace irodori {
 
-/** One step of a sampler as it ran: its time, the velocity it took, and the latent after it. */
-struct SamplerStep {
-    int index;
-    float t;
-    const std::vector<float> & velocity;
-    const std::vector<float> & x;
-};
-
 /**
  * The official samplers. A MeanFlow model takes `steps` equal steps from time 1 to 0, each told its
  * interval. An RF model takes Euler steps from 0.999 to 0 and, while t is in the model's guidance range,
@@ -33,9 +25,12 @@ public:
     /** The times the sampler visits, steps + 1 of them, computed as torch.linspace() computes them. */
     std::vector<float> schedule(int steps) const;
 
-    /** The latent, row-major [frames, latent_dim], reached from `noise` in `steps` steps. */
+    /**
+     * The latent, row-major [frames, latent_dim], reached from `noise` in `steps` steps, or an empty one once
+     * `cancelled`, asked before each step, answers true.
+     */
     std::vector<float> sample(const Conditions & c, std::vector<float> noise, int frames, int steps,
-                              const std::function<void(const SamplerStep &)> & observe = {});
+                              const std::function<bool()> & cancelled = {});
 
     /** The velocity of one step; for RF with guidance, `branches` receives each branch's output. */
     std::vector<float> velocity(const Conditions & c, const std::vector<float> & x, int frames, float t, float t_next,

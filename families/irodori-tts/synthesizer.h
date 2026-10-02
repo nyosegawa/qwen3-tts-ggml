@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -30,6 +31,11 @@ struct Request {
     int steps = 0;
     /** The sampler's starting point, row-major [frames, latent_dim], instead of noise from the seed. */
     std::vector<float> noise;
+    /**
+     * Asked before each of the sampler's steps, which pass no audio to the sink and so cannot be stopped by it;
+     * once it answers true, synthesize() returns without audio.
+     */
+    std::function<bool()> cancelled;
 };
 
 /** Where the time of one synthesis went, in seconds, and how long the speech is. */

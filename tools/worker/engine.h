@@ -10,8 +10,11 @@
 #include "flat-json.h"
 #include "ggml-backend.h"
 
-/** Called with each piece of audio as it is synthesized; returning false stops the synthesis. */
-using PcmSink = std::function<bool(const float * samples, size_t n)>;
+/** Called with each piece of audio as it is synthesized. */
+using PcmSink = std::function<void(const float * samples, size_t n)>;
+
+/** Whether the request has been cancelled. */
+using Cancelled = std::function<bool()>;
 
 /** The worker's options that a family reads. */
 struct WorkerOptions {
@@ -31,8 +34,11 @@ public:
     /** The members of the ready message that describe the model, as JSON members without braces. */
     virtual std::string describe() const = 0;
 
-    /** Synthesizes one request; a request the family cannot take throws, which the worker reports as an error. */
-    virtual void speak(const FlatJson & request, uint64_t seed, const PcmSink & sink) = 0;
+    /**
+     * Synthesizes one request, asking `cancelled` between the steps of the synthesis and stopping without more
+     * audio once it answers true. A request the family cannot take throws, which the worker reports as an error.
+     */
+    virtual void speak(const FlatJson & request, uint64_t seed, const PcmSink & sink, const Cancelled & cancelled) = 0;
 };
 
 std::unique_ptr<Engine> make_qwen3_tts(const WorkerOptions & options, ggml_backend_t backend);

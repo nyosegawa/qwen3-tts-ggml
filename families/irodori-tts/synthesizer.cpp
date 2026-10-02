@@ -134,8 +134,10 @@ size_t Synthesizer::synthesize(const Request & r, const Voice & voice, const Aud
         const Conditions c{text_state, tokens, voice.speaker, voice.speaker_tokens};
         const size_t n = (size_t) frames * codec_.latent_dim();
         if (!r.noise.empty() && r.noise.size() != n) throw std::runtime_error("the given noise does not have the predicted length");
-        x = sampler_.sample(c, r.noise.empty() ? gaussian_noise(r.seed, n) : r.noise, frames, r.steps > 0 ? r.steps : sampler_.default_steps());
+        x = sampler_.sample(c, r.noise.empty() ? gaussian_noise(r.seed, n) : r.noise, frames, r.steps > 0 ? r.steps : sampler_.default_steps(),
+                            r.cancelled);
     }
+    if (x.empty()) return 0;
     const int flat = flattening_point(x, frames, codec_.latent_dim());
     int64_t samples = (int64_t) frames * codec_.hop();
     if (flat > 0) samples = std::min(samples, (int64_t) flat * codec_.hop());

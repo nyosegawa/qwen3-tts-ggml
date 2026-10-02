@@ -63,13 +63,13 @@ std::vector<float> Sampler::velocity(const Conditions & c, const std::vector<flo
 }
 
 std::vector<float> Sampler::sample(const Conditions & c, std::vector<float> x, int frames, int steps,
-                                   const std::function<void(const SamplerStep &)> & observe) {
+                                   const std::function<bool()> & cancelled) {
     const std::vector<float> times = schedule(steps);
     for (int i = 0; i < steps; i++) {
+        if (cancelled && cancelled()) return {};
         const std::vector<float> v = velocity(c, x, frames, times[i], times[i + 1]);
         const float dt = times[i + 1] - times[i];
         for (size_t j = 0; j < x.size(); j++) x[j] = x[j] + v[j] * dt;
-        if (observe) observe({i, times[i], v, x});
     }
     return x;
 }

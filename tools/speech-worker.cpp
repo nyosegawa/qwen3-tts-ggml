@@ -18,8 +18,9 @@
 // ("streaming": "sentence"), so a request is one sentence; its voices are the ones given with --voice, the
 // model is not told the language ("languageSelectable": false), and its "steps" is the sampler's.
 //
-// Requests are served one at a time in arrival order. A cancel takes effect between two chunks, and a
-// request cancelled before it starts is dropped. `speed` is accepted and has no effect.
+// Requests are served one at a time in arrival order. A cancel takes effect between two chunks, and for
+// Irodori-TTS also between two of the sampler's steps, before the first chunk; a cancelled request sends no
+// end, and one cancelled before it starts is dropped. `speed` is accepted and has no effect.
 //
 // `--devices` instead prints the devices ggml can run on and exits, so that the caller can tell whether
 // the machine has a GPU and how much memory it has before starting a worker:
@@ -210,28 +211,23 @@ int main(int argc, char ** argv) {
             inbox.requests.pop_front();
         }
         const std::string id = request["id"];
+        const Cancelled cancelled = [&] { return inbox.is_cancelled(id); };
         try {
-            if (inbox.is_cancelled(id)) {
+            if (cancelled()) {
                 inbox.forget(id);
                 continue;
             }
             size_t samples = 0;
             int seq = 0;
-            bool cancelled = false;
             std::vector<int16_t> pcm;
             engine->speak(request, seed++, [&](const float * s, size_t n) {
-                if (inbox.is_cancelled(id)) {
-                    cancelled = true;
-                    return false;
-                }
                 pcm.resize(n);
                 for (size_t i = 0; i < n; i++) pcm[i] = (int16_t) std::lround(std::max(-1.0f, std::min(1.0f, s[i])) * 32767.0f);
                 emit("{\"type\":\"chunk\",\"id\":" + json_string(id) + ",\"seq\":" + std::to_string(seq++) + ",\"pcm\":\"" +
                      base64((const uint8_t *) pcm.data(), n * sizeof(int16_t)) + "\"}");
                 samples += n;
-                return true;
-            });
-            if (!cancelled) emit("{\"type\":\"end\",\"id\":" + json_string(id) + ",\"samples\":" + std::to_string(samples) + "}");
+            }, cancelled);
+            if (!cancelled()) emit("{\"type\":\"end\",\"id\":" + json_string(id) + ",\"samples\":" + std::to_string(samples) + "}");
         } catch (const std::exception & e) {
             emit("{\"type\":\"error\",\"id\":" + json_string(id) + ",\"error\":" + json_string(e.what()) + "}");
         }
