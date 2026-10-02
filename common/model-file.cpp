@@ -3,6 +3,19 @@
 #include <cstdio>
 #include <stdexcept>
 
+namespace {
+
+/** fseek() takes a long, which is 32 bits on Windows, so it cannot reach a tensor past 2 GiB there. */
+bool seek(FILE * f, uint64_t offset) {
+#ifdef _WIN32
+    return _fseeki64(f, (int64_t) offset, SEEK_SET) == 0;
+#else
+    return fseeko(f, (off_t) offset, SEEK_SET) == 0;
+#endif
+}
+
+}  // namespace
+
 std::string gguf_architecture(const std::string & path) {
     gguf_init_params params = {/*no_alloc =*/true, /*ctx =*/nullptr};
     gguf_context * gguf = gguf_init_from_file(path.c_str(), params);
@@ -26,19 +39,18 @@ ModelFile::ModelFile(const std::string & path, ggml_backend_t backend) : path_(p
     }
     ggml_backend_buffer_set_usage(buffer_, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
 
-    FILE * f = std::fopen(path.c_str(), "rb");
+    FILE * f = ggml_fopen(path.c_str(), "rb");
     if (!f) {
         throw std::runtime_error("cannot open " + path);
     }
-    const size_t data_offset = gguf_get_data_offset(gguf_);
+    const uint64_t data_offset = gguf_get_data_offset(gguf_);
     std::vector<uint8_t> staging;
     for (int64_t i = 0; i < gguf_get_n_tensors(gguf_); i++) {
         const char * name = gguf_get_tensor_name(gguf_, i);
         ggml_tensor * t = ggml_get_tensor(ctx_, name);
         const size_t size = ggml_nbytes(t);
         staging.resize(size);
-        if (std::fseek(f, (long) (data_offset + gguf_get_tensor_offset(gguf_, i)), SEEK_SET) != 0 ||
-            std::fread(staging.data(), 1, size, f) != size) {
+        if (!seek(f, data_offset + gguf_get_tensor_offset(gguf_, i)) || std::fread(staging.data(), 1, size, f) != size) {
             std::fclose(f);
             throw std::runtime_error(std::string("cannot read tensor ") + name + " of " + path);
         }

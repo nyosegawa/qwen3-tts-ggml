@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -21,7 +22,7 @@ struct Npy {
 };
 
 inline Npy read_npy(const std::string & path) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(std::filesystem::u8path(path), std::ios::binary);
     if (!f) throw std::runtime_error("cannot open " + path);
     char magic[6];
     f.read(magic, 6);

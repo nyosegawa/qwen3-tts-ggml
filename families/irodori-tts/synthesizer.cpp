@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
@@ -24,7 +25,7 @@ struct Timer {
 };
 
 bool starts_with_riff(const std::string & path) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(std::filesystem::u8path(path), std::ios::binary);
     if (!f) throw std::runtime_error("cannot open " + path);
     char magic[4] = {};
     f.read(magic, 4);

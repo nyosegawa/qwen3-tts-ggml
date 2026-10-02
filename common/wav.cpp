@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
@@ -28,7 +29,7 @@ std::vector<float> Wav::mono() const {
 }
 
 Wav read_wav(const std::string & path) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(std::filesystem::u8path(path), std::ios::binary);
     if (!f) throw std::runtime_error("cannot open " + path);
     std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     if (bytes.size() < 12 || std::memcmp(bytes.data(), "RIFF", 4) != 0 || std::memcmp(bytes.data() + 8, "WAVE", 4) != 0) {
@@ -81,7 +82,7 @@ Wav read_wav(const std::string & path) {
 }
 
 void write_wav(const std::string & path, const std::vector<float> & pcm, int rate) {
-    std::ofstream f(path, std::ios::binary);
+    std::ofstream f(std::filesystem::u8path(path), std::ios::binary);
     if (!f) throw std::runtime_error("cannot write " + path);
     const uint32_t data_size = (uint32_t) pcm.size() * 2;
     auto put32 = [&](uint32_t v) { f.write((const char *) &v, 4); };

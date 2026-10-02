@@ -3,22 +3,25 @@
 // usage: tokenizer-check <talker.gguf> <cases.tsv>
 
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
+#include "args.h"
 #include "backend.h"
 #include "qwen3-tts/tokenizer.h"
 
 int main(int argc, char ** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <talker.gguf> <cases.tsv>\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 3) {
+        std::fprintf(stderr, "usage: %s <talker.gguf> <cases.tsv>\n", args[0].c_str());
         return 2;
     }
     ggml_backend_t backend = init_backend("cpu");
-    ModelFile model(argv[1], backend);
+    ModelFile model(args[1], backend);
     Tokenizer tokenizer(model);
 
-    std::ifstream f(argv[2]);
+    std::ifstream f(std::filesystem::u8path(args[2]));
     std::string line;
     int total = 0, failed = 0;
     while (std::getline(f, line)) {

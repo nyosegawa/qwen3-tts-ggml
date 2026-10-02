@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include "args.h"
 #include "backend.h"
 #include "npy.h"
 #include "qwen3-tts/codec.h"
@@ -40,14 +41,15 @@ double seconds_since(std::chrono::steady_clock::time_point t0) {
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <codec.gguf> <reference dir> [gpu|cpu] [out.wav]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 3) {
+        std::fprintf(stderr, "usage: %s <codec.gguf> <reference dir> [gpu|cpu] [out.wav]\n", args[0].c_str());
         return 2;
     }
-    const std::string dir = argv[2];
-    ggml_backend_t backend = init_backend(argc > 3 ? argv[3] : "");
+    const std::string dir = args[2];
+    ggml_backend_t backend = init_backend(args.size() > 3 ? args[3] : "");
     std::printf("backend: %s\n", ggml_backend_name(backend));
-    CodecDecoder codec(argv[1], backend);
+    CodecDecoder codec(args[1], backend);
 
     const Npy codes = read_npy(dir + "/codes.npy");
     const Npy wav = read_npy(dir + "/wav.npy");
@@ -77,7 +79,7 @@ int main(int argc, char ** argv) {
         if (pieces.size() != whole.size() || dp.snr_db < 60) status = 1;
     }
     if (whole.size() != (size_t) wav.size() || dw.snr_db < 40) status = 1;
-    if (argc > 4) write_wav(argv[4], whole, codec.sample_rate());
+    if (args.size() > 4) write_wav(args[4], whole, codec.sample_rate());
     ggml_backend_free(backend);
     return status;
 }

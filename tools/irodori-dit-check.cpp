@@ -12,6 +12,7 @@
 #include <fstream>
 #include <string>
 
+#include "args.h"
 #include "backend.h"
 #include "compare.h"
 #include "irodori-tts/sampler.h"
@@ -33,21 +34,22 @@ std::string meta_model(const std::filesystem::path & dir) {
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <model.gguf> <reference out dir> [gpu|cpu|device name]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 3) {
+        std::fprintf(stderr, "usage: %s <model.gguf> <reference out dir> [gpu|cpu|device name]\n", args[0].c_str());
         return 2;
     }
     try {
-        ggml_backend_t backend = init_backend(argc > 3 ? argv[3] : "");
+        ggml_backend_t backend = init_backend(args.size() > 3 ? args[3] : "");
         std::printf("backend: %s\n", ggml_backend_name(backend));
-        ModelFile model(argv[1], backend);
+        ModelFile model(args[1], backend);
         const Dit dit(model);
         Sampler sampler(dit, model, backend);
         const std::string source = model.str("general.source.url");
         ggml_gallocr_t allocr = ggml_gallocr_new(ggml_backend_get_default_buffer_type(backend));
 
         std::vector<std::filesystem::path> dumps;
-        for (const auto & e : std::filesystem::directory_iterator(argv[2])) {
+        for (const auto & e : std::filesystem::directory_iterator(std::filesystem::u8path(args[2]))) {
             if (std::filesystem::exists(e.path() / "dit_velocity.npy") &&
                 source.find("huggingface.co/" + meta_model(e.path()) + "/tree/") != std::string::npos) {
                 dumps.push_back(e.path());
@@ -56,14 +58,14 @@ int main(int argc, char ** argv) {
         std::sort(dumps.begin(), dumps.end());
         bool ok = !dumps.empty();
         for (const auto & d : dumps) {
-            auto npy = [&](const char * f) { return read_npy((d / f).string()); };
+            auto npy = [&](const char * f) { return read_npy((d / f).u8string()); };
             const Npy text = npy("text_state.npy"), speaker = npy("speaker_state.npy"), noise = npy("noise.npy");
             const Npy times = npy("dit_t.npy"), velocity = npy("dit_velocity.npy"), xs = npy("dit_x.npy");
             const Npy cond = npy("dit_cond.npy"), blocks = npy("dit_step0_blocks.npy");
             const Conditions c{text.f32, (int) text.shape[0], speaker.f32, (int) speaker.shape[0]};
             const int frames = (int) noise.shape[0], steps = (int) times.shape[0];
             const size_t n = (size_t) frames * dit.latent_dim();
-            std::printf("%s (%d frames, %d steps)\n", d.filename().string().c_str(), frames, steps);
+            std::printf("%s (%d frames, %d steps)\n", d.filename().u8string().c_str(), frames, steps);
 
             const std::vector<float> schedule = sampler.schedule(steps);
             double schedule_error = 0;

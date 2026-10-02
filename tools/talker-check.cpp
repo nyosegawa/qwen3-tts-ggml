@@ -9,10 +9,12 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <random>
 #include <string>
 
+#include "args.h"
 #include "backend.h"
 #include "npy.h"
 #include "qwen3-tts/prompt.h"
@@ -42,7 +44,7 @@ struct Worst {
 };
 
 std::string meta_field(const std::string & dir, const std::string & key) {
-    std::ifstream f(dir + "/meta.json");
+    std::ifstream f(std::filesystem::u8path(dir + "/meta.json"));
     std::string json((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     const size_t k = json.find("\"" + key + "\"");
     const size_t a = json.find('"', json.find(':', k) + 1);
@@ -53,14 +55,15 @@ std::string meta_field(const std::string & dir, const std::string & key) {
 }  // namespace
 
 int main(int argc, char ** argv) {
-    if (argc < 3) {
-        std::fprintf(stderr, "usage: %s <talker.gguf> <reference dir> [gpu|cpu]\n", argv[0]);
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    if (args.size() < 3) {
+        std::fprintf(stderr, "usage: %s <talker.gguf> <reference dir> [gpu|cpu]\n", args[0].c_str());
         return 2;
     }
-    const std::string dir = argv[2];
-    ggml_backend_t backend = init_backend(argc > 3 ? argv[3] : "");
+    const std::string dir = args[2];
+    ggml_backend_t backend = init_backend(args.size() > 3 ? args[3] : "");
     std::printf("backend: %s\n", ggml_backend_name(backend));
-    Talker talker(argv[1], backend, 2048);
+    Talker talker(args[1], backend, 2048);
     const PromptIds ids(talker.model());
 
     const Npy input_ids = read_npy(dir + "/input_ids.npy");
